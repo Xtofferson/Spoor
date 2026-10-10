@@ -1,4 +1,6 @@
 import { DateTimePicker } from '@expo/ui/community/datetime-picker';
+import { DatePicker, Host } from '@expo/ui/swift-ui';
+import { datePickerStyle, tint } from '@expo/ui/swift-ui/modifiers';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 
@@ -20,12 +22,16 @@ export function DateField({ value, onChange }: DateFieldProps) {
   if (Platform.OS === 'ios') {
     return (
       <ThemedView type="backgroundElement" style={[styles.field, styles.iosField]}>
-        <DateTimePicker
-          value={fromDateString(value)}
-          onValueChange={(_, date) => onChange(toDateString(date))}
-          display="compact"
-          accentColor={theme.accent}
-        />
+        {/* Full-width row so the native picker isn't measured to zero width and becomes untappable. */}
+        <Host matchContents={{ vertical: true }} style={styles.iosHost}>
+          <DatePicker
+            title="Start date"
+            selection={fromDateString(value)}
+            displayedComponents={['date']}
+            onDateChange={(date) => onChange(toDateString(date))}
+            modifiers={[datePickerStyle('compact'), tint(theme.accent)]}
+          />
+        </Host>
       </ThemedView>
     );
   }
@@ -63,8 +69,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two + Spacing.one,
   },
   iosField: {
-    alignItems: 'flex-start',
     paddingVertical: Spacing.one,
+  },
+  iosHost: {
+    width: '100%',
   },
   pressed: {
     opacity: 0.7,
