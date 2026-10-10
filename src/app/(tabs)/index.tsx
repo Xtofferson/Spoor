@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,19 +20,18 @@ export default function TripsScreen() {
             Spoor
           </ThemedText>
 
-          <Link href="/trip/new" asChild>
-            <Pressable
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.planButton,
-                { backgroundColor: theme.accent },
-                pressed && styles.pressed,
-              ]}>
-              <ThemedText type="smallBold" style={{ color: theme.background }}>
-                + Plan a new trip
-              </ThemedText>
-            </Pressable>
-          </Link>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/trip/new')}
+            style={({ pressed }) => [
+              styles.planButton,
+              { backgroundColor: theme.accent },
+              pressed && styles.pressed,
+            ]}>
+            <ThemedText type="smallBold" style={{ color: theme.background }}>
+              + Plan a new trip
+            </ThemedText>
+          </Pressable>
 
           {trips.length === 0 ? (
             <ThemedText themeColor="textSecondary" style={styles.empty}>
@@ -61,24 +60,25 @@ function TripCard({ trip }: { trip: Trip }) {
   if (inBetween > 0) details.push(`${inBetween} ${inBetween === 1 ? 'stop' : 'stops'}`);
 
   return (
-    <Link href={{ pathname: '/trip/[id]', params: { id: trip.id } }} asChild>
-      <Pressable accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
-        <ThemedView type="backgroundElement" style={styles.card}>
-          <View style={[styles.cardStripe, { backgroundColor: theme.accent }]} />
-          <View style={styles.cardBody}>
-            <ThemedText type="default" style={styles.cardTitle}>
-              {trip.name}
-            </ThemedText>
-            <ThemedText type="small">
-              {start} → {end}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {details.join(' · ')}
-            </ThemedText>
-          </View>
-        </ThemedView>
-      </Pressable>
-    </Link>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/trip/[id]', params: { id: trip.id } })}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <View style={[styles.cardStripe, { backgroundColor: theme.accent }]} />
+        <View style={styles.cardBody}>
+          <ThemedText type="default" style={styles.cardTitle}>
+            {trip.name}
+          </ThemedText>
+          <ThemedText type="small">
+            {start} → {end}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {details.join(' · ')}
+          </ThemedText>
+        </View>
+      </ThemedView>
+    </Pressable>
   );
 }
 
