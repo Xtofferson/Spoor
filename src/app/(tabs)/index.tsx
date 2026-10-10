@@ -8,7 +8,7 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { useSyncStatus, type SyncStatus } from '@/lib/trip-sync';
-import { formatDate, useTrips, type Trip } from '@/lib/trips';
+import { formatDate, formatDateRange, tripDays, useTrips, type Trip } from '@/lib/trips';
 
 const SYNC_LABELS: Record<SyncStatus, string> = {
   idle: '',
@@ -85,7 +85,10 @@ function TripCard({ trip }: { trip: Trip }) {
   const end = trip.stops[trip.stops.length - 1]?.name;
   const inBetween = Math.max(trip.stops.length - 2, 0);
 
-  const details = [formatDate(trip.startDate)];
+  const days = trip.endDate ? tripDays(trip.startDate, trip.endDate) : null;
+  const details = trip.endDate
+    ? [formatDateRange(trip.startDate, trip.endDate), `${days} ${days === 1 ? 'day' : 'days'}`]
+    : [formatDate(trip.startDate)];
   if (inBetween > 0) details.push(`${inBetween} ${inBetween === 1 ? 'stop' : 'stops'}`);
 
   return (

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,16 +18,56 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { createId, saveTrip, toDateString, type Stop, type Trip } from '@/lib/trips';
+import { moveStopKeepingDates, normalizeStopDates, previousStopDate } from '@/lib/stop-dates';
+import {
+  createId,
+  deleteTrip,
+  saveTrip,
+  toDateString,
+  tripDays,
+  type Stop,
+  type Trip,
+} from '@/lib/trips';
+
+const DELETE_RED = '#B42318';
 
 function stopLabel(index: number, count: number) {
-  if (index === 0) return 'Start';
-  if (index === count - 1) return 'End';
+  if (index === 0) return 'Origin';
+  if (index === count - 1) return 'Destination';
   return `Stop ${index}`;
 }
 
-function emptyStop(): Stop {
-  return { id: createId(), name: '' };
+/** The form's starting stops: a blank origin and destination, or the trip's stops with dates filled in. */
+function initialStops(trip: Trip | undefined): Stop[] {
+  const today = toDateString(new Date());
+  if (!trip) {
+    return [
+      { id: createId(), name: '', departDate: today },
+      { id: createId(), name: '', arriveDate: today },
+    ];
+  }
+  // Trips saved before stops had their own dates take them from the trip's start and end.
+  const stops = trip.stops.map((stop, index) => {
+    if (index === 0) return { ...stop, departDate: stop.departDate ?? trip.startDate };
+    if (index === trip.stops.length - 1) {
+      return { ...stop, arriveDate: stop.arriveDate ?? trip.endDate ?? trip.startDate };
+    }
+    return stop;
+  });
+  return normalizeStopDates(stops, trip.startDate);
+}
+
+/** Asks before deleting. Alert isn't available on web, so use the browser's confirm there. */
+function confirmDelete(name: string, onConfirm: () => void) {
+  const message = `“${name}” will be removed from this phone and your account.`;
+  if (Platform.OS === 'web') {
+    if (window.confirm(`Delete this trip?\n\n${message}`)) onConfirm();
+    return;
+  }
+  Alert.alert('Delete this trip?', message, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Delete', style: 'destructive', onPress: onConfirm },
+  ]);
 }
 
 function close() {
@@ -41,32 +82,40 @@ export function TripForm({ trip }: { trip?: Trip }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(trip?.name ?? '');
-  const [startDate, setStartDate] = useState(trip?.startDate ?? toDateString(new Date()));
-  const [stops, setStops] = useState<Stop[]>(trip?.stops ?? [emptyStop(), emptyStop()]);
+  const [stops, setStops] = useState<Stop[]>(() => initialStops(trip));
 
-  const start = stops[0];
-  const end = stops[stops.length - 1];
-  const canSave = name.trim() !== '' && start.name.trim() !== '' && end.name.trim() !== '';
+  const origin = stops[0];
+  const destination = stops[stops.length - 1];
+  // normalizeStopDates always gives the origin a departure and the destination an arrival.
+  const startDate = origin.departDate!;
+  const endDate = destination.arriveDate!;
+  const canSave = name.trim() !== '' && origin.name.trim() !== '' && destination.name.trim() !== '';
 
-  function renameStop(id: string, value: string) {
-    setStops((current) => current.map((stop) => (stop.id === id ? { ...stop, name: value } : stop)));
+  /** Every change to the stops goes through here, so their dates stay in order. */
+  function changeStops(update: (current: Stop[]) => Stop[]) {
+    setStops((current) => normalizeStopDates(update(current), current[0].departDate!));
+  }
+
+  function updateStop(id: string, changes: Partial<Stop>) {
+    changeStops((current) => current.map((stop) => (stop.id === id ? { ...stop, ...changes } : stop)));
   }
 
   function moveStop(index: number, offset: -1 | 1) {
-    setStops((current) => {
-      const next = [...current];
-      [next[index], next[index + offset]] = [next[index + offset], next[index]];
-      return next;
-    });
+    changeStops((current) => moveStopKeepingDates(current, index, offset));
   }
 
   function removeStop(id: string) {
-    setStops((current) => current.filter((stop) => stop.id !== id));
+    changeStops((current) => current.filter((stop) => stop.id !== id));
   }
 
   function addStop() {
-    // New stops go just before the end, which is where an in-between stop belongs.
-    setStops((current) => [...current.slice(0, -1), emptyStop(), current[current.length - 1]]);
+    // New stops go just before the destination, arriving the day the previous stop is left.
+    changeStops((current) => {
+      const before = current[current.length - 2];
+      const date = before.departDate ?? before.arriveDate;
+      const stop: Stop = { id: createId(), name: '', arriveDate: date, departDate: date };
+      return [...current.slice(0, -1), stop, current[current.length - 1]];
+    });
   }
 
   function save() {
@@ -75,7 +124,9 @@ export function TripForm({ trip }: { trip?: Trip }) {
     saveTrip({
       id: trip?.id ?? createId(),
       name: name.trim(),
+      // The trip runs from leaving the origin to arriving at the destination.
       startDate,
+      endDate,
       stops: stops
         .map((stop) => ({ ...stop, name: stop.name.trim() }))
         .filter((stop, index) => stop.name !== '' || index === 0 || index === stops.length - 1),
@@ -84,6 +135,16 @@ export function TripForm({ trip }: { trip?: Trip }) {
     });
     close();
   }
+
+  function remove() {
+    if (!trip) return;
+    confirmDelete(trip.name, () => {
+      deleteTrip(trip.id);
+      close();
+    });
+  }
+
+  const days = tripDays(startDate, endDate);
 
   const inputStyle = [
     styles.input,
@@ -116,55 +177,71 @@ export function TripForm({ trip }: { trip?: Trip }) {
 
         <View style={styles.section}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            Start date
-          </ThemedText>
-          <DateField value={startDate} onChange={setStartDate} />
-        </View>
-
-        <View style={styles.section}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            Stops
+            Route · {days} {days === 1 ? 'day' : 'days'}
           </ThemedText>
           {stops.map((stop, index) => {
             const label = stopLabel(index, stops.length);
+            const isStart = index === 0;
+            const isEnd = index === stops.length - 1;
             return (
-              <ThemedView key={stop.id} type="backgroundElement" style={styles.stopRow}>
-                <View style={[styles.stopMarker, { backgroundColor: theme.accent }]}>
-                  <ThemedText type="smallBold" style={{ color: theme.backgroundElement }}>
-                    {index === 0 ? 'A' : index === stops.length - 1 ? 'B' : index}
-                  </ThemedText>
+              <ThemedView key={stop.id} type="backgroundElement" style={styles.stopCard}>
+                <View style={styles.stopRow}>
+                  <View style={[styles.stopMarker, { backgroundColor: theme.accent }]}>
+                    <ThemedText type="smallBold" style={{ color: theme.backgroundElement }}>
+                      {isStart ? 'A' : isEnd ? 'B' : index}
+                    </ThemedText>
+                  </View>
+                  <TextInput
+                    value={stop.name}
+                    onChangeText={(value) => updateStop(stop.id, { name: value })}
+                    placeholder={label}
+                    placeholderTextColor={theme.textSecondary}
+                    style={[styles.stopInput, { color: theme.text }]}
+                    accessibilityLabel={label}
+                  />
+                  <IconButton
+                    icon={{ ios: 'chevron.up', android: 'keyboard_arrow_up', web: 'keyboard_arrow_up' }}
+                    label={`Move ${label} up`}
+                    disabled={isStart}
+                    onPress={() => moveStop(index, -1)}
+                  />
+                  <IconButton
+                    icon={{
+                      ios: 'chevron.down',
+                      android: 'keyboard_arrow_down',
+                      web: 'keyboard_arrow_down',
+                    }}
+                    label={`Move ${label} down`}
+                    disabled={isEnd}
+                    onPress={() => moveStop(index, 1)}
+                  />
+                  <IconButton
+                    icon={{ ios: 'xmark', android: 'close', web: 'close' }}
+                    label={`Remove ${label}`}
+                    // A trip always keeps a start and an end.
+                    hidden={stops.length <= 2}
+                    onPress={() => removeStop(stop.id)}
+                  />
                 </View>
-                <TextInput
-                  value={stop.name}
-                  onChangeText={(value) => renameStop(stop.id, value)}
-                  placeholder={label}
-                  placeholderTextColor={theme.textSecondary}
-                  style={[styles.stopInput, { color: theme.text }]}
-                  accessibilityLabel={label}
-                />
-                <IconButton
-                  icon={{ ios: 'chevron.up', android: 'keyboard_arrow_up', web: 'keyboard_arrow_up' }}
-                  label={`Move ${label} up`}
-                  disabled={index === 0}
-                  onPress={() => moveStop(index, -1)}
-                />
-                <IconButton
-                  icon={{
-                    ios: 'chevron.down',
-                    android: 'keyboard_arrow_down',
-                    web: 'keyboard_arrow_down',
-                  }}
-                  label={`Move ${label} down`}
-                  disabled={index === stops.length - 1}
-                  onPress={() => moveStop(index, 1)}
-                />
-                <IconButton
-                  icon={{ ios: 'xmark', android: 'close', web: 'close' }}
-                  label={`Remove ${label}`}
-                  // A trip always keeps a start and an end.
-                  hidden={stops.length <= 2}
-                  onPress={() => removeStop(stop.id)}
-                />
+
+                <View style={styles.stopDates}>
+                  {!isStart && (
+                    <DateField
+                      label="Arrives"
+                      value={stop.arriveDate!}
+                      onChange={(value) => updateStop(stop.id, { arriveDate: value })}
+                      minimumDate={previousStopDate(stops, index)}
+                    />
+                  )}
+                  {!isEnd && (
+                    <DateField
+                      label="Leaves"
+                      value={stop.departDate!}
+                      onChange={(value) => updateStop(stop.id, { departDate: value })}
+                      minimumDate={isStart ? undefined : stop.arriveDate}
+                    />
+                  )}
+                </View>
               </ThemedView>
             );
           })}
@@ -188,6 +265,17 @@ export function TripForm({ trip }: { trip?: Trip }) {
           styles.footer,
           { paddingBottom: insets.bottom + Spacing.three, borderTopColor: theme.backgroundSelected },
         ]}>
+        {trip && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Delete trip"
+            onPress={remove}
+            style={({ pressed }) => [styles.button, styles.deleteButton, pressed && styles.pressed]}>
+            <ThemedText type="smallBold" style={{ color: DELETE_RED }}>
+              Delete
+            </ThemedText>
+          </Pressable>
+        )}
         <Pressable
           accessibilityRole="button"
           onPress={close}
@@ -264,13 +352,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two + Spacing.one,
   },
+  stopCard: {
+    borderRadius: Spacing.two,
+    paddingLeft: Spacing.two,
+    paddingRight: Spacing.one,
+    paddingBottom: Spacing.two,
+  },
   stopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
-    borderRadius: Spacing.two,
-    paddingLeft: Spacing.two,
-    paddingRight: Spacing.one,
+  },
+  stopDates: {
+    gap: Spacing.one,
+    // Line up with the stop name, just right of the marker.
+    paddingLeft: Spacing.four + Spacing.two,
+    paddingRight: Spacing.two,
   },
   stopMarker: {
     width: Spacing.four,
@@ -310,6 +407,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two + Spacing.one,
     borderRadius: Spacing.four,
+  },
+  deleteButton: {
+    // Keeps Delete on the left, away from Save.
+    marginRight: 'auto',
+    paddingHorizontal: 0,
   },
   primaryButton: {
     minWidth: 140,

@@ -13,6 +13,7 @@ type TripRow = {
   user_id: string;
   name: string;
   start_date: string;
+  end_date: string | null;
   stops: Stop[];
   created_at: string;
   updated_at: string;
@@ -23,6 +24,7 @@ function fromRow(row: TripRow): Trip {
     id: row.id,
     name: row.name,
     startDate: row.start_date,
+    endDate: row.end_date ?? undefined,
     stops: row.stops,
     createdAt: Date.parse(row.created_at),
     updatedAt: Date.parse(row.updated_at),
@@ -35,6 +37,7 @@ function toRow(trip: Trip, userId: string): TripRow {
     user_id: userId,
     name: trip.name,
     start_date: trip.startDate,
+    end_date: trip.endDate ?? null,
     stops: trip.stops,
     created_at: new Date(trip.createdAt).toISOString(),
     updated_at: new Date(trip.updatedAt).toISOString(),
@@ -96,11 +99,25 @@ export async function syncTrips(userId: string) {
       updateTripsFor(userId, (trips) => mergeRemoteTrips(trips, (data as TripRow[]).map(fromRow)));
 
       const pending = getTripsFor(userId).filter((trip) => trip.dirty);
-      if (pending.length > 0) {
+      const deleted = pending.filter((trip) => trip.deletedAt);
+      const changed = pending.filter((trip) => !trip.deletedAt);
+      if (deleted.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('trips')
+          .delete()
+          .in(
+            'id',
+            deleted.map((trip) => trip.id)
+          );
+        if (deleteError) throw deleteError;
+      }
+      if (changed.length > 0) {
         const { error: uploadError } = await supabase
           .from('trips')
-          .upsert(pending.map((trip) => toRow(trip, userId)));
+          .upsert(changed.map((trip) => toRow(trip, userId)));
         if (uploadError) throw uploadError;
+      }
+      if (pending.length > 0) {
         updateTripsFor(userId, (trips) => markTripsSynced(trips, pending));
       }
     } while (runAgain);

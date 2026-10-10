@@ -5,6 +5,12 @@ import { storage } from '@/lib/storage';
 export type Stop = {
   id: string;
   name: string;
+  /** Day of arrival, as `YYYY-MM-DD`. Not used for the origin. */
+  arriveDate?: string;
+  /** Day of departure, as `YYYY-MM-DD`. Not used for the final destination. */
+  departDate?: string;
+  /** Single stop date from an earlier version; read once and replaced by the two above. */
+  date?: string;
 };
 
 export type Trip = {
@@ -12,12 +18,19 @@ export type Trip = {
   name: string;
   /** Local calendar date as `YYYY-MM-DD`, so it never shifts with time zones. */
   startDate: string;
+  /** Last day of the trip, as `YYYY-MM-DD`. Missing on trips saved before end dates existed. */
+  endDate?: string;
   /** Ordered stops: the first is the start, the last is the end. */
   stops: Stop[];
   createdAt: number;
   updatedAt: number;
   /** True when the trip has changes on this phone that haven't been uploaded to Supabase yet. */
   dirty?: boolean;
+  /**
+   * Set when the trip is deleted. The trip stays hidden on the phone until the deletion
+   * has reached Supabase; otherwise the next sync would download it again.
+   */
+  deletedAt?: number;
 };
 
 /** Where trips were kept before accounts existed. */
@@ -29,7 +42,10 @@ function storageKey(userId: string) {
 }
 
 let currentUserId: string | null = null;
+/** Every trip on the phone for the current user, including deleted ones waiting to sync. */
 let cache: Trip[] = NO_TRIPS;
+/** The trips to show: `cache` without deleted ones. Kept as one array so React sees a stable value. */
+let visible: Trip[] = NO_TRIPS;
 const listeners = new Set<() => void>();
 
 function load(key: string): Trip[] {
@@ -47,8 +63,13 @@ function emit() {
   listeners.forEach((listener) => listener());
 }
 
-function getTrips(): Trip[] {
-  return cache;
+function setCache(next: Trip[]) {
+  cache = next;
+  visible = next.some((trip) => trip.deletedAt) ? next.filter((trip) => !trip.deletedAt) : next;
+}
+
+function getVisibleTrips(): Trip[] {
+  return visible;
 }
 
 function subscribe(listener: () => void) {
@@ -67,7 +88,7 @@ export function setTripsUser(userId: string | null) {
   currentUserId = userId;
 
   if (!userId) {
-    cache = NO_TRIPS;
+    setCache(NO_TRIPS);
     emit();
     return;
   }
@@ -85,11 +106,11 @@ export function setTripsUser(userId: string | null) {
     storage.removeItem(LEGACY_STORAGE_KEY);
   }
 
-  cache = trips;
+  setCache(trips);
   emit();
 }
 
-/** The signed-in user's trips right now, outside React. */
+/** All of the signed-in user's trips right now, including deleted ones waiting to sync. */
 export function getTripsFor(userId: string): Trip[] {
   return userId === currentUserId ? cache : NO_TRIPS;
 }
@@ -100,14 +121,14 @@ export function getTripsFor(userId: string): Trip[] {
  */
 export function updateTripsFor(userId: string, update: (trips: Trip[]) => Trip[]) {
   if (userId !== currentUserId) return;
-  cache = update(cache);
+  setCache(update(cache));
   storage.setItem(storageKey(userId), JSON.stringify(cache));
   emit();
 }
 
 /** The signed-in user's trips, most recently edited first. */
 export function useTrips(): Trip[] {
-  return useSyncExternalStore(subscribe, getTrips, () => NO_TRIPS);
+  return useSyncExternalStore(subscribe, getVisibleTrips, () => NO_TRIPS);
 }
 
 export function useTrip(id: string | undefined): Trip | undefined {
@@ -121,6 +142,17 @@ export function saveTrip(trip: Trip) {
     { ...trip, dirty: true },
     ...trips.filter((t) => t.id !== trip.id),
   ]);
+}
+
+/** Deletes a trip on the phone; the deletion is uploaded on the next sync. */
+export function deleteTrip(id: string) {
+  if (!currentUserId) return;
+  const now = Date.now();
+  updateTripsFor(currentUserId, (trips) =>
+    trips.map((trip) =>
+      trip.id === id ? { ...trip, deletedAt: now, updatedAt: now, dirty: true } : trip
+    )
+  );
 }
 
 export function createId() {
@@ -144,4 +176,24 @@ export function formatDate(value: string) {
     month: 'short',
     year: 'numeric',
   });
+}
+
+/** Number of days a trip spans, counting both the first and last day. */
+export function tripDays(startDate: string, endDate: string) {
+  const ms = fromDateString(endDate).getTime() - fromDateString(startDate).getTime();
+  return Math.round(ms / 86_400_000) + 1;
+}
+
+/** e.g. "10 – 15 Oct 2026", or "28 Oct – 2 Nov 2026" across months. */
+export function formatDateRange(startDate: string, endDate: string) {
+  const start = fromDateString(startDate);
+  const end = fromDateString(endDate);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+  const startText = start.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: sameMonth ? undefined : 'short',
+    year: sameYear ? undefined : 'numeric',
+  });
+  return `${startText} – ${formatDate(endDate)}`;
 }
