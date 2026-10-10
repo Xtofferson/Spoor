@@ -8,4 +8,7 @@ export const storage = {
   setItem(key: string, value: string) {
     Storage.setItemSync(key, value);
   },
+  removeItem(key: string) {
+    Storage.removeItemSync(key);
+  },
 };

@@ -17,4 +17,11 @@ export const storage = {
       // Storage unavailable; the in-memory copy still works for this session.
     }
   },
+  removeItem(key: string) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Nothing to remove if storage is unavailable.
+    }
+  },
 };

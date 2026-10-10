@@ -6,19 +6,48 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { supabase } from '@/lib/supabase';
+import { useSyncStatus, type SyncStatus } from '@/lib/trip-sync';
 import { formatDate, useTrips, type Trip } from '@/lib/trips';
+
+const SYNC_LABELS: Record<SyncStatus, string> = {
+  idle: '',
+  syncing: 'Syncing…',
+  synced: 'All trips synced',
+  offline: 'Offline · changes will sync when you’re back online',
+  error: 'Couldn’t sync · will try again',
+};
 
 export default function TripsScreen() {
   const theme = useTheme();
   const trips = useTrips();
+  const syncStatus = useSyncStatus();
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.content}>
-          <ThemedText type="title" style={{ color: theme.accent }}>
-            Spoor
-          </ThemedText>
+          <View style={styles.header}>
+            <View style={styles.headerRow}>
+              <ThemedText type="title" style={{ color: theme.accent }}>
+                Spoor
+              </ThemedText>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => supabase.auth.signOut()}
+                hitSlop={Spacing.two}
+                style={({ pressed }) => pressed && styles.pressed}>
+                <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                  Sign out
+                </ThemedText>
+              </Pressable>
+            </View>
+            {SYNC_LABELS[syncStatus] !== '' && (
+              <ThemedText type="small" themeColor="textSecondary">
+                {SYNC_LABELS[syncStatus]}
+              </ThemedText>
+            )}
+          </View>
 
           <Pressable
             accessibilityRole="button"
@@ -97,6 +126,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
+  },
+  header: {
+    gap: Spacing.one,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   planButton: {
     alignItems: 'center',
