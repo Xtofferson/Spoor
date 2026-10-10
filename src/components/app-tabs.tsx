@@ -9,23 +9,33 @@ export default function AppTabs() {
 
   return (
     <NativeTabs
+      tintColor={colors.accent}
       backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
+      indicatorColor={colors.backgroundSelected}
+      labelStyle={{ selected: { color: colors.accent } }}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
+        <NativeTabs.Trigger.Label>Trips</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="suitcase.fill" md="luggage" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
+      <NativeTabs.Trigger name="route">
+        <NativeTabs.Trigger.Label>Route</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="point.topleft.down.to.point.bottomright.curvepath" md="route" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="camps">
+        <NativeTabs.Trigger.Label>Camps</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="tent.fill" md="camping" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="maps">
+        <NativeTabs.Trigger.Label>Maps</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="map.fill" md="map" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="prep">
+        <NativeTabs.Trigger.Label>Prep</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="checklist" md="checklist" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );
