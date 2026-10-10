@@ -43,15 +43,20 @@ export function previousStopDate(stops: Stop[], index: number): string | undefin
   return before.departDate ?? before.arriveDate;
 }
 
+/** The parts of a stop that describe the place, as opposed to when you're there. */
+function place({ id, name, coordinates, placeLabel }: Stop) {
+  return { id, name, coordinates, placeLabel };
+}
+
 /**
- * Moves a stop up or down the route. The schedule stays in place: places swap
- * positions but each position keeps its dates, so the dates stay in order.
+ * Moves a stop up or down the route. The schedule stays in place: places (with any
+ * pinned location) swap positions but each position keeps its dates, so the dates stay in order.
  */
 export function moveStopKeepingDates(stops: Stop[], index: number, offset: -1 | 1): Stop[] {
   const other = index + offset;
   if (other < 0 || other >= stops.length) return stops;
   const next = [...stops];
-  next[index] = { ...stops[index], id: stops[other].id, name: stops[other].name };
-  next[other] = { ...stops[other], id: stops[index].id, name: stops[index].name };
+  next[index] = { ...stops[index], ...place(stops[other]) };
+  next[other] = { ...stops[other], ...place(stops[index]) };
   return next;
 }

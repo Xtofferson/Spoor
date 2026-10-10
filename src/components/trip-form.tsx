@@ -2,7 +2,9 @@ import { router } from 'expo-router';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,10 +16,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateField } from '@/components/date-field';
+import { canPickOnMap, LocationPicker } from '@/components/location-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { usePlaceSuggestions } from '@/lib/place-search';
+import type { LonLat, PlaceCandidate } from '@/lib/route-math';
+import { describeLocation } from '@/lib/route-plan';
 import { moveStopKeepingDates, normalizeStopDates, previousStopDate } from '@/lib/stop-dates';
 import {
   createId,
@@ -70,6 +76,21 @@ function confirmDelete(name: string, onConfirm: () => void) {
   ]);
 }
 
+/** Name used for a stop that was pinned on the map but couldn't be named, e.g. while offline. */
+const PINNED_NAME = 'Pinned location';
+
+/** A stop counts as filled in once it has a name or a pin. */
+function hasPlace(stop: Stop) {
+  return stop.name.trim() !== '' || stop.coordinates !== undefined;
+}
+
+/** The closest stop with a pin, looking back along the route first; used to centre the map. */
+function nearestPinned(stops: Stop[], index: number): LonLat | undefined {
+  for (let i = index - 1; i >= 0; i--) if (stops[i].coordinates) return stops[i].coordinates;
+  for (let i = index + 1; i < stops.length; i++) if (stops[i].coordinates) return stops[i].coordinates;
+  return undefined;
+}
+
 function close() {
   if (router.canGoBack()) {
     router.back();
@@ -89,7 +110,12 @@ export function TripForm({ trip }: { trip?: Trip }) {
   // normalizeStopDates always gives the origin a departure and the destination an arrival.
   const startDate = origin.departDate!;
   const endDate = destination.arriveDate!;
-  const canSave = name.trim() !== '' && origin.name.trim() !== '' && destination.name.trim() !== '';
+  const canSave = name.trim() !== '' && hasPlace(origin) && hasPlace(destination);
+  // The stop whose location is being picked on the map.
+  const [pickingId, setPickingId] = useState<string | null>(null);
+  // The stop whose name is being typed, which shows place suggestions.
+  const [searchingId, setSearchingId] = useState<string | null>(null);
+  const pickingIndex = stops.findIndex((stop) => stop.id === pickingId);
 
   /** Every change to the stops goes through here, so their dates stay in order. */
   function changeStops(update: (current: Stop[]) => Stop[]) {
@@ -98,6 +124,37 @@ export function TripForm({ trip }: { trip?: Trip }) {
 
   function updateStop(id: string, changes: Partial<Stop>) {
     changeStops((current) => current.map((stop) => (stop.id === id ? { ...stop, ...changes } : stop)));
+  }
+
+  function renameStop(stop: Stop, name: string) {
+    setSearchingId(stop.id);
+    // A location chosen from suggestions belongs to the old name, so typing drops it.
+    // Map pins stay: they're about the spot, not the name.
+    updateStop(
+      stop.id,
+      stop.placeLabel ? { name, coordinates: undefined, placeLabel: undefined } : { name }
+    );
+  }
+
+  function chooseSuggestion(id: string, place: PlaceCandidate) {
+    setSearchingId(null);
+    Keyboard.dismiss();
+    updateStop(id, { name: place.name, coordinates: place.coordinates, placeLabel: place.label });
+  }
+
+  function pickLocation(id: string, coordinates: LonLat) {
+    setPickingId(null);
+    updateStop(id, { coordinates, placeLabel: undefined });
+    // Name an unnamed stop after the place it was pinned at. Offline, it just stays unnamed.
+    if (stops.find((stop) => stop.id === id)?.name.trim()) return;
+    describeLocation(coordinates)
+      .then((label) => {
+        if (!label) return;
+        changeStops((current) =>
+          current.map((stop) => (stop.id === id && stop.name.trim() === '' ? { ...stop, name: label } : stop))
+        );
+      })
+      .catch(() => {});
   }
 
   function moveStop(index: number, offset: -1 | 1) {
@@ -128,7 +185,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
       startDate,
       endDate,
       stops: stops
-        .map((stop) => ({ ...stop, name: stop.name.trim() }))
+        .map((stop) => ({ ...stop, name: stop.name.trim() || (stop.coordinates ? PINNED_NAME : '') }))
         .filter((stop, index) => stop.name !== '' || index === 0 || index === stops.length - 1),
       createdAt: trip?.createdAt ?? now,
       updatedAt: now,
@@ -193,8 +250,10 @@ export function TripForm({ trip }: { trip?: Trip }) {
                   </View>
                   <TextInput
                     value={stop.name}
-                    onChangeText={(value) => updateStop(stop.id, { name: value })}
-                    placeholder={label}
+                    onChangeText={(value) => renameStop(stop, value)}
+                    onBlur={() => setSearchingId((current) => (current === stop.id ? null : current))}
+                    autoCorrect={false}
+                    placeholder={stop.coordinates ? PINNED_NAME : label}
                     placeholderTextColor={theme.textSecondary}
                     style={[styles.stopInput, { color: theme.text }]}
                     accessibilityLabel={label}
@@ -223,6 +282,40 @@ export function TripForm({ trip }: { trip?: Trip }) {
                     onPress={() => removeStop(stop.id)}
                   />
                 </View>
+
+                {searchingId === stop.id && (
+                  <StopSuggestions
+                    query={stop.name}
+                    near={nearestPinned(stops, index)}
+                    onChoose={(place) => chooseSuggestion(stop.id, place)}
+                  />
+                )}
+
+                {(canPickOnMap || stop.coordinates) && (
+                  <View style={styles.stopLocation}>
+                    {stop.coordinates ? (
+                      <>
+                        <ThemedText type="small" style={[styles.locationText, { color: theme.accent }]}>
+                          {stop.placeLabel ?? 'Pinned on the map'}
+                        </ThemedText>
+                        {canPickOnMap && (
+                          <TextButton label="Move pin" onPress={() => setPickingId(stop.id)} />
+                        )}
+                        <TextButton
+                          label="Remove pin"
+                          accessibilityLabel={`Remove map pin from ${label}`}
+                          onPress={() => updateStop(stop.id, { coordinates: undefined, placeLabel: undefined })}
+                        />
+                      </>
+                    ) : (
+                      <TextButton
+                        label="Pick on map"
+                        accessibilityLabel={`Pick ${label} on the map`}
+                        onPress={() => setPickingId(stop.id)}
+                      />
+                    )}
+                  </View>
+                )}
 
                 <View style={styles.stopDates}>
                   {!isStart && (
@@ -301,7 +394,103 @@ export function TripForm({ trip }: { trip?: Trip }) {
           </ThemedText>
         </Pressable>
       </View>
+
+      <LocationPicker
+        visible={pickingIndex !== -1}
+        title={pickingIndex === -1 ? '' : `Pick ${stopLabel(pickingIndex, stops.length).toLowerCase()}`}
+        initial={stops[pickingIndex]?.coordinates}
+        near={pickingIndex === -1 ? undefined : nearestPinned(stops, pickingIndex)}
+        onCancel={() => setPickingId(null)}
+        onPick={(coordinates) => pickingId && pickLocation(pickingId, coordinates)}
+      />
     </KeyboardAvoidingView>
+  );
+}
+
+/** Suggestions under the stop being typed. Picking one sets the stop's exact location. */
+function StopSuggestions({
+  query,
+  near,
+  onChoose,
+}: {
+  query: string;
+  near?: LonLat;
+  onChoose: (place: PlaceCandidate) => void;
+}) {
+  const theme = useTheme();
+  const { suggestions, loading, error } = usePlaceSuggestions(query, near);
+  const typed = query.trim().length >= 3;
+
+  if (!typed) return null;
+  return (
+    <View style={styles.suggestions} accessibilityLiveRegion="polite">
+      {loading && (
+        <View style={styles.suggestionStatus}>
+          <ActivityIndicator size="small" color={theme.accent} />
+          <ThemedText type="small" themeColor="textSecondary">
+            Searching…
+          </ThemedText>
+        </View>
+      )}
+      {error && (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.suggestionStatus}>
+          {error}
+        </ThemedText>
+      )}
+      {!loading && !error && suggestions.length === 0 && (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.suggestionStatus}>
+          No matches. Try adding the country, e.g. “Nata, Botswana”, or use Pick on map.
+        </ThemedText>
+      )}
+      {suggestions.map((place) => (
+        <Pressable
+          key={place.label}
+          accessibilityRole="button"
+          accessibilityLabel={place.label}
+          onPress={() => onChoose(place)}
+          style={({ pressed }) => [
+            styles.suggestion,
+            { borderTopColor: theme.backgroundSelected },
+            pressed && { backgroundColor: theme.backgroundSelected },
+          ]}>
+          <ThemedText type="smallBold" numberOfLines={1}>
+            {place.name}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+            {place.label}
+          </ThemedText>
+        </Pressable>
+      ))}
+      {suggestions.length > 0 && (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.suggestionStatus}>
+          Not listed? Add the country, e.g. “Nata, Botswana”.
+        </ThemedText>
+      )}
+    </View>
+  );
+}
+
+function TextButton({
+  label,
+  accessibilityLabel,
+  onPress,
+}: {
+  label: string;
+  accessibilityLabel?: string;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      onPress={onPress}
+      hitSlop={Spacing.two}
+      style={({ pressed }) => pressed && styles.pressed}>
+      <ThemedText type="smallBold" style={{ color: theme.accent }}>
+        {label}
+      </ThemedText>
+    </Pressable>
   );
 }
 
@@ -362,6 +551,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+  },
+  suggestions: {
+    marginLeft: Spacing.four + Spacing.two,
+    marginRight: Spacing.two,
+    marginBottom: Spacing.two,
+  },
+  suggestion: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: Spacing.two,
+  },
+  suggestionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  locationText: {
+    flexShrink: 1,
+  },
+  stopLocation: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.three,
+    // Line up with the stop name, just right of the marker.
+    paddingLeft: Spacing.four + Spacing.two,
+    paddingBottom: Spacing.two,
   },
   stopDates: {
     gap: Spacing.one,

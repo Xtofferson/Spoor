@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
+import type { LonLat } from '@/lib/route-math';
 import { storage } from '@/lib/storage';
 
 export type Stop = {
@@ -11,6 +12,13 @@ export type Stop = {
   departDate?: string;
   /** Single stop date from an earlier version; read once and replaced by the two above. */
   date?: string;
+  /**
+   * Exact location, picked on the map or chosen from search suggestions. When set, it's
+   * used instead of searching for the name.
+   */
+  coordinates?: LonLat;
+  /** The suggestion the location came from, e.g. "Nata, CT, Botswana". Unset for map pins. */
+  placeLabel?: string;
 };
 
 export type Trip = {
