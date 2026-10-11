@@ -369,7 +369,7 @@ async function optionalVariant(
  * for the fastest and the shortest route and, if the fastest crosses a border, one that
  * avoids that border crossing. Routes that are practically the same are dropped.
  */
-async function fetchRouteOptions(from: LonLat, to: LonLat): Promise<RouteOptions> {
+export async function fetchRouteOptions(from: LonLat, to: LonLat): Promise<RouteOptions> {
   const apart = distanceMeters(from, to);
   const notes: string[] = [];
   let routes: FetchedRoute[];
