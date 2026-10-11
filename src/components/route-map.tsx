@@ -16,6 +16,16 @@ export type MapLine = {
   onPress?: () => void;
 };
 
+/** A point of interest on the map, e.g. a fuel stop, shown with its own icon. */
+export type MapPoint = {
+  key: string;
+  coordinate: LonLat;
+  title: string;
+  description?: string;
+  /** A bundled image, from require(). */
+  icon: number;
+};
+
 function toLatLng([longitude, latitude]: LonLat): LatLng {
   return { latitude, longitude };
 }
@@ -38,10 +48,11 @@ type RouteMapProps = {
   /** Drawn in order, so put the line to highlight last. */
   lines: MapLine[];
   stops?: PlannedStop[];
+  points?: MapPoint[];
   style?: StyleProp<ViewStyle>;
 };
 
-export function RouteMap({ lines, stops, style }: RouteMapProps) {
+export function RouteMap({ lines, stops, points, style }: RouteMapProps) {
   const theme = useTheme();
   const mapRef = useRef<MapView>(null);
   const [ready, setReady] = useState(false);
@@ -83,6 +94,17 @@ export function RouteMap({ lines, stops, style }: RouteMapProps) {
           title={stop.name}
           description={stop.label}
           pinColor={theme.accent}
+        />
+      ))}
+      {points?.map((point) => (
+        <Marker
+          key={point.key}
+          coordinate={toLatLng(point.coordinate)}
+          title={point.title}
+          description={point.description}
+          image={point.icon}
+          anchor={{ x: 0.5, y: 0.5 }}
+          tracksViewChanges={false}
         />
       ))}
     </MapView>

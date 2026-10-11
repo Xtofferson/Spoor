@@ -2,6 +2,7 @@ import * as Network from 'expo-network';
 import { useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
+import type { FuelStopChoice } from '@/lib/fuel';
 import { supabase } from '@/lib/supabase';
 import { markTripsSynced, mergeRemoteTrips } from '@/lib/trip-merge';
 import { getTripsFor, updateTripsFor, useTrips, type Stop, type Trip } from '@/lib/trips';
@@ -14,6 +15,8 @@ type TripRow = {
   name: string;
   start_date: string;
   end_date: string | null;
+  people: number | null;
+  fuel_stops: FuelStopChoice[] | null;
   stops: Stop[];
   created_at: string;
   updated_at: string;
@@ -25,6 +28,8 @@ function fromRow(row: TripRow): Trip {
     name: row.name,
     startDate: row.start_date,
     endDate: row.end_date ?? undefined,
+    people: row.people ?? undefined,
+    fuelStops: row.fuel_stops ?? undefined,
     stops: row.stops,
     createdAt: Date.parse(row.created_at),
     updatedAt: Date.parse(row.updated_at),
@@ -38,6 +43,8 @@ function toRow(trip: Trip, userId: string): TripRow {
     name: trip.name,
     start_date: trip.startDate,
     end_date: trip.endDate ?? null,
+    people: trip.people ?? null,
+    fuel_stops: trip.fuelStops ?? null,
     stops: trip.stops,
     created_at: new Date(trip.createdAt).toISOString(),
     updated_at: new Date(trip.updatedAt).toISOString(),

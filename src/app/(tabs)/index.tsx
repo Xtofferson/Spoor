@@ -48,15 +48,27 @@ export default function TripsScreen() {
               <ThemedText type="small" themeColor="textSecondary" style={styles.syncStatus}>
                 {SYNC_LABELS[syncStatus]}
               </ThemedText>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => supabase.auth.signOut()}
-                hitSlop={Spacing.two}
-                style={({ pressed }) => pressed && styles.pressed}>
-                <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                  Sign out
-                </ThemedText>
-              </Pressable>
+              <View style={styles.headerActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Vehicle settings"
+                  onPress={() => router.push('/settings')}
+                  hitSlop={Spacing.two}
+                  style={({ pressed }) => pressed && styles.pressed}>
+                  <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                    Vehicle
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => supabase.auth.signOut()}
+                  hitSlop={Spacing.two}
+                  style={({ pressed }) => pressed && styles.pressed}>
+                  <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                    Sign out
+                  </ThemedText>
+                </Pressable>
+              </View>
             </View>
           </View>
 
@@ -154,6 +166,10 @@ const styles = StyleSheet.create({
   },
   syncStatus: {
     flexShrink: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: Spacing.four,
   },
   planButton: {
     alignItems: 'center',

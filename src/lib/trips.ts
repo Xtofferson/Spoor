@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
+import type { FuelStopChoice } from '@/lib/fuel';
 import type { ChosenRoute, LonLat } from '@/lib/route-math';
 import { storage } from '@/lib/storage';
 
@@ -32,6 +33,10 @@ export type Trip = {
   endDate?: string;
   /** Ordered stops: the first is the start, the last is the end. */
   stops: Stop[];
+  /** People travelling, for planning water. Missing on trips saved before it was asked for. */
+  people?: number;
+  /** Towns (fuel stops) chosen to fill up at. Fuel is planned between these, or every stop if none. */
+  fuelStops?: FuelStopChoice[];
   createdAt: number;
   updatedAt: number;
   /** True when the trip has changes on this phone that haven't been uploaded to Supabase yet. */
@@ -152,6 +157,11 @@ export function saveTrip(trip: Trip) {
     { ...trip, dirty: true },
     ...trips.filter((t) => t.id !== trip.id),
   ]);
+}
+
+/** Saves the trip's chosen fuel stops. */
+export function saveFuelStops(trip: Trip, fuelStops: FuelStopChoice[]) {
+  saveTrip({ ...trip, fuelStops: fuelStops.length > 0 ? fuelStops : undefined, updatedAt: Date.now() });
 }
 
 /** Deletes a trip on the phone; the deletion is uploaded on the next sync. */

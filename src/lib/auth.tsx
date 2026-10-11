@@ -3,6 +3,7 @@ import { createContext, use, useEffect, useState, type PropsWithChildren } from 
 
 import { supabase } from '@/lib/supabase';
 import { setTripsUser } from '@/lib/trips';
+import { setVehicleUser } from '@/lib/vehicle';
 
 type AuthState = {
   session: Session | null;
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       // Switch trip lists before rendering, so screens never show the previous user's trips.
       setTripsUser(session?.user.id ?? null);
+      setVehicleUser(session?.user.id ?? null);
       setState({ session, loading: false });
     });
     return () => subscription.unsubscribe();

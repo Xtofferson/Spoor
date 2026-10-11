@@ -20,6 +20,13 @@ export const Colors = {
     surfaceGravel: '#8A918C',
     surfaceUnpaved: '#D08A12',
     surfaceUnknown: '#D9DCD6',
+    // Fuel warnings, as in the prototype's route and fuel screen.
+    warning: '#D9902F',
+    warningBackground: '#FCEBC7',
+    warningText: '#5A3A00',
+    danger: '#C4572A',
+    dangerBackground: '#F8DDD2',
+    dangerText: '#6B2410',
   },
   dark: {
     text: '#ffffff',
@@ -33,6 +40,12 @@ export const Colors = {
     surfaceGravel: '#8A918C',
     surfaceUnpaved: '#D08A12',
     surfaceUnknown: '#3A3F3C',
+    warning: '#D9902F',
+    warningBackground: '#3D2E10',
+    warningText: '#F2C46B',
+    danger: '#E07A4F',
+    dangerBackground: '#3F1D12',
+    dangerText: '#F4B8A0',
   },
 } as const;
 

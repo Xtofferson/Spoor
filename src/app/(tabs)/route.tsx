@@ -11,15 +11,49 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { RouteMap, type MapLine } from '@/components/route-map';
+import {
+  FuelRangeCard,
+  FuelStopPicker,
+  FuelStretchList,
+  SuppliesStatus,
+  suppliesFound,
+  WaterCard,
+  WaterStretchList,
+} from '@/components/supplies-plan';
+import { RouteMap, type MapLine, type MapPoint } from '@/components/route-map';
 import { SurfaceBar, SurfaceLegend } from '@/components/surface-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  fuelStopRows,
+  fuelStopsAlong,
+  fuelStretches,
+  legFuelLitres,
+  plannedFuelStops,
+  toggleFuelStopChoice,
+  type FuelStop,
+  type FuelStopChoice,
+  type FuelStopRow,
+  type FuelStretch,
+  type Vehicle,
+} from '@/lib/fuel';
 import { formatDistance, formatDuration } from '@/lib/route-math';
 import { applyChosenRoutes, useRoutePlan, type ShownRoute } from '@/lib/route-plan';
-import { useTrips, type Trip } from '@/lib/trips';
+import { buildRouteLine } from '@/lib/route-points';
+import { useRouteSupplies, type SuppliesState } from '@/lib/route-supplies';
+import { saveFuelStops, useTrips, type Trip } from '@/lib/trips';
+import { useVehicle } from '@/lib/vehicle';
+import { nightsAt, stopNeedsTreating, waterStopsAlong, waterStretches, type WaterStop, type WaterStretch } from '@/lib/water';
+
+const NO_CHOICES: FuelStopChoice[] = [];
+
+const FUEL_ICON = require('@/assets/images/fuel-marker.png');
+/** Fuel stops you haven't chosen to fill up at, once you've chosen some. */
+const FUEL_OTHER_ICON = require('@/assets/images/fuel-marker-other.png');
+const WATER_ICON = require('@/assets/images/water-marker.png');
+const WATER_TREAT_ICON = require('@/assets/images/water-treat-marker.png');
 
 export default function RouteScreen() {
   const theme = useTheme();
@@ -43,9 +77,75 @@ export default function RouteScreen() {
     [route, theme.accent]
   );
 
+  // Fuel and water along the shown route, grouped into stops, and the stretches between them.
+  const vehicle = useVehicle();
+  const people = trip?.people ?? 1;
+  const [suppliesRefreshKey, setSuppliesRefreshKey] = useState(0);
+  const line = useMemo(() => (route ? buildRouteLine(route.legs) : undefined), [route]);
+  const supplies = useRouteSupplies(line?.points, suppliesRefreshKey);
+  const found = suppliesFound(supplies);
+  const fuelStops = useMemo(() => (line && found ? fuelStopsAlong(line, found.fuel, found.settlements) : []), [line, found]);
+  // Fuel is planned between the towns chosen for the trip, or every stop if none are.
+  const fuelChoices = trip?.fuelStops ?? NO_CHOICES;
+  const plannedStops = useMemo(() => plannedFuelStops(fuelStops, fuelChoices), [fuelStops, fuelChoices]);
+  const fuelRows = useMemo(
+    () => (line ? fuelStopRows(line, fuelStops, fuelChoices, vehicle) : []),
+    [line, fuelStops, fuelChoices, vehicle]
+  );
+  const fuelStretchList = useMemo(
+    () => (line && found && vehicle ? fuelStretches(line, plannedStops, vehicle) : []),
+    [line, found, plannedStops, vehicle]
+  );
+  const waterStops = useMemo(() => (line && found ? waterStopsAlong(line, found.water, found.settlements) : []), [line, found]);
+  // Nights at each trip stop on the route, in route order, from its arrive and leave dates.
+  const nights = useMemo(
+    () =>
+      route?.stops.map((planned) => {
+        const stop = trip?.stops.find((s) => s.id === planned.stopId);
+        return nightsAt(stop?.arriveDate, stop?.departDate);
+      }) ?? [],
+    [route, trip]
+  );
+  const waterStretchList = useMemo(
+    () =>
+      line && found && vehicle?.waterLitres !== undefined
+        ? waterStretches(line, waterStops, { people, waterLitres: vehicle.waterLitres }, nights)
+        : [],
+    [line, found, waterStops, vehicle, people, nights]
+  );
+  const mapPoints: MapPoint[] = useMemo(
+    () => [
+      ...fuelStops.map((stop, index) => {
+        const planned = plannedStops.includes(stop);
+        return {
+          // The icon is part of the key, so the marker is redrawn when a stop is chosen.
+          key: `fuel-${index}-${planned ? 'planned' : 'other'}`,
+          coordinate: stop.coordinates,
+          title: `Fuel · ${stop.label}`,
+          description: [...new Set(stop.places.map((s) => s.name ?? s.brand ?? 'Fuel station'))].join(', '),
+          icon: planned ? FUEL_ICON : FUEL_OTHER_ICON,
+        };
+      }),
+      ...waterStops.map((stop, index) => {
+        const treat = stopNeedsTreating(stop);
+        const kinds = [...new Set(stop.places.map((p) => p.kind))].join(', ');
+        const undrinkable = stop.places.every((p) => p.notForDrinking);
+        return {
+          key: `water-${index}`,
+          coordinate: stop.coordinates,
+          title: `${kinds} · ${stop.label}`,
+          description: undrinkable ? 'Mapped as not for drinking' : treat ? 'May need treating' : 'Drinking water',
+          icon: treat || undrinkable ? WATER_TREAT_ICON : WATER_ICON,
+        };
+      }),
+    ],
+    [fuelStops, plannedStops, waterStops]
+  );
+
   function selectTrip(id: string) {
     setSelectedId(id);
     setRefreshKey(0);
+    setSuppliesRefreshKey(0);
   }
 
   return (
@@ -67,6 +167,7 @@ export default function RouteScreen() {
               <RouteMap
                 lines={lines}
                 stops={route?.stops}
+                points={mapPoints}
                 style={{ height: Math.max(260, height * 0.4) }}
               />
 
@@ -90,7 +191,22 @@ export default function RouteScreen() {
                 </ThemedText>
               )}
 
-              {route && <RouteDetails route={route} tripId={trip.id} />}
+              {route && (
+                <RouteDetails
+                  route={route}
+                  tripId={trip.id}
+                  vehicle={vehicle}
+                  people={people}
+                  supplies={supplies}
+                  fuelStretches={fuelStretchList}
+                  fuelStopCount={fuelStops.length}
+                  fuelRows={fuelRows}
+                  onToggleFuelStop={(stop) => saveFuelStops(trip, toggleFuelStopChoice(fuelChoices, stop))}
+                  waterStretches={waterStretchList}
+                  waterStops={waterStops}
+                  onRefreshSupplies={() => setSuppliesRefreshKey((key) => key + 1)}
+                />
+              )}
 
               {state.status !== 'idle' && state.status !== 'loading' && (
                 <Pressable
@@ -148,8 +264,35 @@ function TripPicker({
   );
 }
 
-function RouteDetails({ route, tripId }: { route: ShownRoute; tripId: string }) {
+function RouteDetails({
+  route,
+  tripId,
+  vehicle,
+  people,
+  supplies,
+  fuelStretches,
+  fuelStopCount,
+  fuelRows,
+  onToggleFuelStop,
+  waterStretches,
+  waterStops,
+  onRefreshSupplies,
+}: {
+  route: ShownRoute;
+  tripId: string;
+  vehicle?: Vehicle;
+  people: number;
+  supplies: SuppliesState;
+  fuelStretches: FuelStretch[];
+  fuelStopCount: number;
+  fuelRows: FuelStopRow[];
+  onToggleFuelStop: (stop: FuelStop) => void;
+  waterStretches: WaterStretch[];
+  waterStops: WaterStop[];
+  onRefreshSupplies: () => void;
+}) {
   const theme = useTheme();
+  const legLitres = vehicle ? route.legs.map((leg) => legFuelLitres(leg, vehicle.consumption)) : undefined;
   return (
     <View style={styles.details}>
       <ThemedView type="backgroundElement" style={styles.card}>
@@ -162,6 +305,26 @@ function RouteDetails({ route, tripId }: { route: ShownRoute; tripId: string }) 
           usually take longer.
         </ThemedText>
       </ThemedView>
+
+      <FuelRangeCard vehicle={vehicle} tripLitres={legLitres?.reduce((sum, litres) => sum + litres, 0)} />
+      <FuelStopPicker rows={fuelRows} onToggleStop={onToggleFuelStop} />
+      <FuelStretchList vehicle={vehicle} stretches={fuelStretches} supplies={supplies} stopCount={fuelStopCount} />
+
+      <WaterCard vehicle={vehicle} people={people} />
+      <WaterStretchList
+        vehicle={vehicle}
+        people={people}
+        stretches={waterStretches}
+        stops={waterStops}
+        supplies={supplies}
+      />
+
+      <SuppliesStatus
+        supplies={supplies}
+        fuelStops={fuelStopCount}
+        waterStops={waterStops.length}
+        onRefresh={onRefreshSupplies}
+      />
 
       <ThemedView type="backgroundElement" style={styles.card}>
         <ThemedText type="smallBold">Road surface</ThemedText>
@@ -193,6 +356,7 @@ function RouteDetails({ route, tripId }: { route: ShownRoute; tripId: string }) 
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary" style={styles.mono}>
                 {formatDistance(leg.distance)} · {formatDuration(leg.duration)}
+                {legLitres && ` · ≈ ${Math.round(legLitres[index])} L`}
               </ThemedText>
               {leg.chosen && (
                 <ThemedText type="small" style={{ color: theme.accent }}>

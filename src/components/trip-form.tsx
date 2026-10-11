@@ -103,6 +103,11 @@ export function TripForm({ trip }: { trip?: Trip }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(trip?.name ?? '');
+  const [people, setPeople] = useState(trip?.people ?? 1);
+
+  function changePeople(by: number) {
+    setPeople((current) => Math.min(MAX_PEOPLE, Math.max(1, current + by)));
+  }
   const [stops, setStops] = useState<Stop[]>(() => initialStops(trip));
 
   const origin = stops[0];
@@ -181,6 +186,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
     saveTrip({
       id: trip?.id ?? createId(),
       name: name.trim(),
+      people,
       // The trip runs from leaving the origin to arriving at the destination.
       startDate,
       endDate,
@@ -230,6 +236,36 @@ export function TripForm({ trip }: { trip?: Trip }) {
             returnKeyType="next"
             accessibilityLabel="Trip name"
           />
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            People on trip
+          </ThemedText>
+          <ThemedView type="backgroundElement" style={styles.peopleRow}>
+            <ThemedText>For planning water</ThemedText>
+            <View
+              style={styles.stepper}
+              accessibilityRole="adjustable"
+              accessibilityLabel="People on trip"
+              accessibilityValue={{ now: people, min: 1, max: MAX_PEOPLE }}
+              accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+              onAccessibilityAction={(event) => changePeople(event.nativeEvent.actionName === 'increment' ? 1 : -1)}>
+              <StepButton
+                label="−"
+                accessibilityLabel="One fewer person"
+                disabled={people <= 1}
+                onPress={() => changePeople(-1)}
+              />
+              <ThemedText style={styles.peopleCount}>{people}</ThemedText>
+              <StepButton
+                label="+"
+                accessibilityLabel="One more person"
+                disabled={people >= MAX_PEOPLE}
+                onPress={() => changePeople(1)}
+              />
+            </View>
+          </ThemedView>
         </View>
 
         <View style={styles.section}>
@@ -470,6 +506,41 @@ function StopSuggestions({
   );
 }
 
+/** Most people on one trip, matching the limit in Supabase. */
+const MAX_PEOPLE = 20;
+
+function StepButton({
+  label,
+  accessibilityLabel,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  accessibilityLabel: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.stepButton,
+        { borderColor: theme.accent },
+        disabled && styles.disabled,
+        pressed && styles.pressed,
+      ]}>
+      <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 20 }}>
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
 function TextButton({
   label,
   accessibilityLabel,
@@ -531,6 +602,35 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
+  },
+  peopleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+    borderRadius: Spacing.two,
+    paddingLeft: Spacing.three,
+    paddingRight: Spacing.two,
+    paddingVertical: Spacing.one,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  stepButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  peopleCount: {
+    minWidth: 28,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 600,
   },
   section: {
     gap: Spacing.two,

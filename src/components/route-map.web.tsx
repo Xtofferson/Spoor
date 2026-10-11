@@ -15,9 +15,19 @@ export type MapLine = {
   onPress?: () => void;
 };
 
+export type MapPoint = {
+  key: string;
+  coordinate: LonLat;
+  title: string;
+  description?: string;
+  /** A bundled image, from require(). */
+  icon: number;
+};
+
 type RouteMapProps = {
   lines: MapLine[];
   stops?: PlannedStop[];
+  points?: MapPoint[];
   style?: StyleProp<ViewStyle>;
 };
 
