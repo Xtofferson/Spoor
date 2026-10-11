@@ -38,6 +38,15 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/** The safari brand palette, the same in light and dark mode. */
+export const SafariColors = {
+  sand: '#F3E7CF',
+  ochre: '#D9902F',
+  burntOrange: '#C4572A',
+  olive: '#5E6B3A',
+  darkBrown: '#3B2A1E',
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

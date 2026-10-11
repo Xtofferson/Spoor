@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -9,6 +10,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { useSyncStatus, type SyncStatus } from '@/lib/trip-sync';
 import { formatDate, formatDateRange, tripDays, useTrips, type Trip } from '@/lib/trips';
+
+/** The wordmark's shape (720×220) and the widest it's shown, matching its 1x PNG. */
+const WORDMARK_ASPECT = 720 / 220;
+const WORDMARK_MAX_WIDTH = 396;
 
 const SYNC_LABELS: Record<SyncStatus, string> = {
   idle: '',
@@ -22,15 +27,26 @@ export default function TripsScreen() {
   const theme = useTheme();
   const trips = useTrips();
   const syncStatus = useSyncStatus();
+  const { width: screenWidth } = useWindowDimensions();
+  // Fill the width inside the page padding, up to the size the artwork was drawn for.
+  const wordmarkWidth = Math.min(screenWidth - Spacing.four * 2, WORDMARK_MAX_WIDTH);
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.header}>
+            <Image
+              source={require('@/assets/brand/spoor-wordmark.png')}
+              style={{ width: wordmarkWidth, height: wordmarkWidth / WORDMARK_ASPECT }}
+              contentFit="contain"
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel="Spoor"
+            />
             <View style={styles.headerRow}>
-              <ThemedText type="title" style={{ color: theme.accent }}>
-                Spoor
+              <ThemedText type="small" themeColor="textSecondary" style={styles.syncStatus}>
+                {SYNC_LABELS[syncStatus]}
               </ThemedText>
               <Pressable
                 accessibilityRole="button"
@@ -42,11 +58,6 @@ export default function TripsScreen() {
                 </ThemedText>
               </Pressable>
             </View>
-            {SYNC_LABELS[syncStatus] !== '' && (
-              <ThemedText type="small" themeColor="textSecondary">
-                {SYNC_LABELS[syncStatus]}
-              </ThemedText>
-            )}
           </View>
 
           <Pressable
@@ -131,12 +142,18 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   header: {
-    gap: Spacing.one,
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   headerRow: {
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  syncStatus: {
+    flexShrink: 1,
   },
   planButton: {
     alignItems: 'center',
