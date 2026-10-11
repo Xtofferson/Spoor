@@ -158,6 +158,8 @@ export type SupplyPoint = {
   createdBy?: string;
   /** Added on this phone and not uploaded yet. */
   pending?: boolean;
+  /** How many times uploading it has failed, while it's pending. */
+  uploadAttempts?: number;
 };
 
 export type PointRow = {

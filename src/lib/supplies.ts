@@ -124,62 +124,97 @@ function photoDirectory() {
 
 /**
  * Saves a new place on the phone straight away; it's uploaded with its photo on the next
- * sync, so it can be added offline.
+ * sync, so it can be added offline. Returns false if the photo couldn't be kept (e.g. the
+ * phone is out of space); the place is still saved, without it.
  */
-export function addSupplyPoint(point: Omit<SupplyPoint, 'source' | 'pending' | 'createdBy'>, photoUri?: string) {
+export function addSupplyPoint(
+  point: Omit<SupplyPoint, 'source' | 'pending' | 'createdBy'>,
+  photoUri?: string
+): { photoSaved: boolean } {
   const userId = currentUserId;
-  if (!userId) return;
+  if (!userId) return { photoSaved: false };
   let localPhotoUri: string | undefined;
   if (photoUri) {
-    const copy = new File(photoDirectory(), `${point.id}.jpg`);
-    new File(photoUri).copySync(copy, { overwrite: true });
-    localPhotoUri = copy.uri;
+    try {
+      const copy = new File(photoDirectory(), `${point.id}.jpg`);
+      new File(photoUri).copySync(copy, { overwrite: true });
+      localPhotoUri = copy.uri;
+    } catch (error) {
+      console.warn('Keeping the photo failed:', error);
+    }
   }
   storePending(userId, [
     ...pending.get(),
     { ...point, localPhotoUri, source: 'user', createdBy: userId, pending: true },
   ]);
   void syncSupplyPoints(userId);
+  return { photoSaved: !photoUri || localPhotoUri !== undefined };
+}
+
+/** Changes one unsent place, e.g. once its photo is uploaded, so that step isn't repeated. */
+function updatePending(userId: string, id: string, changes: Partial<SupplyPoint>) {
+  storePending(
+    userId,
+    pending.get().map((p) => (p.id === id ? { ...p, ...changes } : p))
+  );
+}
+
+/** Uploads one place and its photo. Throws if it couldn't be uploaded. */
+async function uploadPoint(userId: string, point: SupplyPoint) {
+  let photoPath = point.photoPath;
+  if (point.localPhotoUri && !photoPath) {
+    const file = new File(point.localPhotoUri);
+    if (file.exists) {
+      const path = `${userId}/${point.id}.jpg`;
+      const { error } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .upload(path, await file.arrayBuffer(), { contentType: 'image/jpeg', upsert: false });
+      // Already there means an earlier try uploaded it before going offline.
+      if (error && !/exists|duplicate/i.test(error.message)) throw error;
+      photoPath = path;
+      updatePending(userId, point.id, { photoPath });
+    } else {
+      // The photo is gone from the phone: upload the place without it rather than not at all.
+      updatePending(userId, point.id, { localPhotoUri: undefined });
+    }
+  }
+  const { error } = await supabase.from('supply_points').upsert(rowFromPoint({ ...point, photoPath }, userId));
+  if (error) throw error;
 }
 
 let syncing = false;
 
-/** Uploads places added on this phone, each with its photo. Quietly waits when offline. */
+/**
+ * Uploads places added on this phone, each with its photo. Quietly waits when offline. Each
+ * place is tried on its own, so one that keeps failing doesn't hold up the others.
+ */
 export async function syncSupplyPoints(userId: string) {
-  if (syncing || userId !== currentUserId) return;
+  if (syncing || userId !== currentUserId || pending.get().length === 0) return;
   syncing = true;
   let uploaded = false;
   try {
-    for (const point of pending.get()) {
-      let photoPath = point.photoPath;
-      if (point.localPhotoUri && !photoPath) {
-        const path = `${userId}/${point.id}.jpg`;
-        const bytes = await new File(point.localPhotoUri).arrayBuffer();
-        const { error } = await supabase.storage
-          .from(PHOTO_BUCKET)
-          .upload(path, bytes, { contentType: 'image/jpeg', upsert: false });
-        // Already there means an earlier try uploaded it before going offline.
-        if (error && !/exists|duplicate/i.test(error.message)) throw error;
-        photoPath = path;
-      }
-      const { error } = await supabase
-        .from('supply_points')
-        .upsert(rowFromPoint({ ...point, photoPath }, userId));
-      if (error) throw error;
-      uploaded = true;
+    const network = await Network.getNetworkStateAsync();
+    if (network.isConnected === false || network.isInternetReachable === false) return;
 
-      if (point.localPhotoUri) {
-        const file = new File(point.localPhotoUri);
-        if (file.exists) file.delete();
+    for (const point of pending.get()) {
+      if (userId !== currentUserId) return;
+      try {
+        await uploadPoint(userId, point);
+        uploaded = true;
+        if (point.localPhotoUri) {
+          const file = new File(point.localPhotoUri);
+          if (file.exists) file.delete();
+        }
+        storePending(
+          userId,
+          pending.get().filter((p) => p.id !== point.id)
+        );
+      } catch (error) {
+        // Kept for the next sync; the others still go.
+        console.warn('Supply point upload failed:', error);
+        updatePending(userId, point.id, { uploadAttempts: (point.uploadAttempts ?? 0) + 1 });
       }
-      storePending(
-        userId,
-        pending.get().filter((p) => p.id !== point.id)
-      );
     }
-  } catch (error) {
-    // Offline or the server is unreachable: try again later.
-    console.warn('Supply point upload failed:', error);
   } finally {
     syncing = false;
     if (uploaded) version.set(version.get() + 1);

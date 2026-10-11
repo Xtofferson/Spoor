@@ -361,7 +361,9 @@
     "takePhoto": "Neem foto",
     "choosePhoto": "Kies foto",
     "preparing": "Berei foto voor…",
-    "add": "Voeg plek by"
+    "add": "Voeg plek by",
+    "photoNotKept": "Plek bygevoeg sonder die foto",
+    "photoNotKeptHint": "Die foto kon nie op jou foon gestoor word nie, dalk omdat dit vol is. Die plek self is gestoor."
   },
   "place": {
     "notFound": "Hierdie plek is nie meer op die kaart nie.",

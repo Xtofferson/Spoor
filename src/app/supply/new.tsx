@@ -96,7 +96,7 @@ export default function AddSupplyScreen() {
     setTriedSaving(true);
     if (!hasPlace || Object.keys(allErrors).length > 0 || busy) return;
     const trimmed = (value: string) => value.trim() || undefined;
-    addSupplyPoint(
+    const { photoSaved } = addSupplyPoint(
       {
         id: newPointId(),
         category: form.category,
@@ -109,6 +109,7 @@ export default function AddSupplyScreen() {
       },
       photo
     );
+    if (!photoSaved) Alert.alert(t('addPlace.photoNotKept'), t('addPlace.photoNotKeptHint'));
     close();
   }
 

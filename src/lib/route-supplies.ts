@@ -9,6 +9,7 @@ import {
 } from '@/lib/route-points';
 import { storage } from '@/lib/storage';
 import { t } from '@/lib/i18n';
+import { shareRequest } from '@/lib/in-flight';
 
 /**
  * Public Overpass servers, tried in order. They're often busy, and refuse requests that
@@ -142,11 +143,17 @@ export function useRouteSupplies(
     const line = routeRef.current;
     if (!key || useSaved || !line) return;
     let cancelled = false;
-    fetchRouteSupplies(line, filtersRef.current)
-      .then((supplies) => {
+    const onFetched = onFetchedRef.current;
+    shareRequest(key, () =>
+      fetchRouteSupplies(line, filtersRef.current).then((supplies) => {
         const value: SavedSupplies = { ...supplies, fetchedAt: Date.now() };
         storage.setItem(key, JSON.stringify(value));
-        onFetchedRef.current?.(supplies);
+        // Told once per lookup, however many screens are waiting for it.
+        onFetched?.(supplies);
+        return value;
+      })
+    )
+      .then((value) => {
         if (!cancelled) setResult({ request, value: { status: 'ready', ...value } });
       })
       .catch((error: unknown) => {

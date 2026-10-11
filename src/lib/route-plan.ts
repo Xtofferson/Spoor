@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { t } from '@/lib/i18n';
+import { shareRequest } from '@/lib/in-flight';
 
 import {
   choiceFitsLeg,
@@ -455,9 +456,13 @@ export function useRouteOptions(from: LonLat | undefined, to: LonLat | undefined
       .slice(key.indexOf('.', 'spoor.options.'.length) + 1)
       .split('>')
       .map((point) => point.split(',').map(Number) as LonLat);
-    fetchRouteOptions(a, b)
-      .then((options) => {
+    shareRequest(key, () =>
+      fetchRouteOptions(a, b).then((options) => {
         storage.setItem(key, JSON.stringify(options));
+        return options;
+      })
+    )
+      .then((options) => {
         if (!cancelled) setResult({ request, value: { status: 'ready', ...options } });
       })
       .catch((error: unknown) => {
@@ -517,9 +522,13 @@ export function useRoutePlan(trip: Trip | undefined, refreshKey = 0): RoutePlanS
         label: label ?? undefined,
       })
     );
-    planRoute(stops)
-      .then((plan) => {
+    shareRequest(planKey(id), () =>
+      planRoute(stops).then((plan) => {
         storage.setItem(planKey(id), JSON.stringify(plan));
+        return plan;
+      })
+    )
+      .then((plan) => {
         if (!cancelled) setResult({ request, value: { status: 'ready', plan } });
       })
       .catch((error: unknown) => {

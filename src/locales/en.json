@@ -361,7 +361,9 @@
     "takePhoto": "Take photo",
     "choosePhoto": "Choose photo",
     "preparing": "Preparing photo…",
-    "add": "Add place"
+    "add": "Add place",
+    "photoNotKept": "Place added without the photo",
+    "photoNotKeptHint": "The photo couldn’t be saved on your phone, maybe because it’s full. The place itself is saved."
   },
   "place": {
     "notFound": "This place isn’t on the map any more.",
