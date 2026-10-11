@@ -3,6 +3,8 @@ import 'expo-sqlite/localStorage/install';
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 
+import { setAccessTokenSource } from '@/lib/api-auth';
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -30,3 +32,6 @@ AppState.addEventListener('change', (state) => {
     supabase.auth.stopAutoRefresh();
   }
 });
+
+// Edge Functions (e.g. OpenRouteService) are called with the signed-in user's token.
+setAccessTokenSource(async () => (await supabase.auth.getSession()).data.session?.access_token);

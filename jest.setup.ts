@@ -2,5 +2,6 @@
 // Supabase holds real data. Tests that need responses replace fetch with their own.
 globalThis.fetch = jest.fn(() => Promise.reject(new Error('Network access is disabled in tests')));
 
-// A placeholder key, so code that checks for one runs; it's never sent anywhere.
-process.env.EXPO_PUBLIC_ORS_KEY = 'test-key';
+// Placeholders, so code that checks for them runs; nothing is ever sent anywhere.
+process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'test-key';

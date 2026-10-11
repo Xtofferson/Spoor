@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { accessToken } from '@/lib/api-auth';
 import { t } from '@/lib/i18n';
 import { shareRequest } from '@/lib/in-flight';
 
@@ -27,8 +28,11 @@ import {
 import { storage } from '@/lib/storage';
 import type { Trip } from '@/lib/trips';
 
-const ORS_URL = 'https://api.openrouteservice.org';
-const ORS_KEY = process.env.EXPO_PUBLIC_ORS_KEY;
+/**
+ * OpenRouteService, through Spoor's "ors" Supabase Edge Function, which holds the
+ * OpenRouteService key so it isn't in the app (supabase/functions/ors).
+ */
+const ORS_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/ors`;
 
 /** How far from the previous stop to look for the next one. */
 const SEARCH_RADIUS_KM = 2000;
@@ -62,14 +66,18 @@ export type RoutePlan = {
 export class RouteError extends Error {}
 
 export async function orsFetch(path: string, init?: RequestInit) {
-  if (!ORS_KEY) {
-    throw new RouteError(t('errors.orsKeyMissing'));
-  }
+  const token = await accessToken();
+  if (!token) throw new RouteError(t('errors.signInForRoutes'));
   let response: Response;
   try {
     response = await fetch(`${ORS_URL}${path}`, {
       ...init,
-      headers: { Authorization: ORS_KEY, 'Content-Type': 'application/json', ...init?.headers },
+      // Only the user's token: the function accepts a signed-in user, not the app's key.
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
     });
   } catch {
     throw new RouteError(t('errors.orsUnreachable'));
@@ -77,6 +85,9 @@ export async function orsFetch(path: string, init?: RequestInit) {
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const message: string = body?.error?.message ?? body?.error ?? `Request failed (${response.status})`;
+    // Spoor's own limit per account, from the Edge Function.
+    if (body?.error?.code === 'spoor-daily-limit') throw new RouteError(t('errors.orsUserLimit'));
+    if (response.status === 401) throw new RouteError(t('errors.signInForRoutes'));
     if (message === 'Quota exceeded' || response.status === 429) {
       throw new RouteError(t('errors.orsQuota'));
     }

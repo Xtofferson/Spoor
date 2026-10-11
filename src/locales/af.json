@@ -1,6 +1,5 @@
 {
   "errors": {
-    "orsKeyMissing": "EXPO_PUBLIC_ORS_KEY ontbreek. Voeg dit by .env en herbegin Expo.",
     "orsUnreachable": "Kon nie OpenRouteService bereik nie. Kyk na jou verbinding en probeer weer.",
     "orsQuota": "OpenRouteService se gratis daaglikse limiet is bereik. Dit stel binne 24 uur terug; roetes wat jy reeds gesien het en vasgespelde stoppunte werk steeds.",
     "orsLimit": "OpenRouteService-limiet: {{message}}",
@@ -15,7 +14,9 @@
     "suppliesBusy": "Kon nie brandstof, water en voorrade van OpenStreetMap kry nie: sy bedieners is besig of jy is vanlyn. Probeer oor ’n paar minute weer.",
     "supplies": "Kon nie brandstof, water en voorrade van OpenStreetMap kry nie.",
     "signInToDelete": "Meld aan om plekke uit te vee.",
-    "deleteFailed": "Kon dit nie uitvee nie. Kyk na jou verbinding en probeer weer."
+    "deleteFailed": "Kon dit nie uitvee nie. Kyk na jou verbinding en probeer weer.",
+    "signInForRoutes": "Meld weer aan om roetes te beplan.",
+    "orsUserLimit": "Jy het vandag baie roetes beplan. Roetes wat jy reeds gesien het, werk steeds; probeer môre weer."
   },
   "routeOptions": {
     "pinned": "Op die kaart vasgespeld",

@@ -2,7 +2,7 @@
 
 Reviewed on 12 October 2026, at commit `3183d30` (navigation and Trips redesign). No code was changed for this review.
 
-**Progress:** ✅ #1, #3, #5 and #7 are fixed.
+**Progress:** ✅ #1, #2, #3, #5 and #7 are fixed.
 
 **Effort:** **S** = under 2 hours · **M** = half a day to a day · **L** = several days.
 
@@ -22,7 +22,7 @@ The findings below are what to fix next.
 | # | Area | Finding | One-line fix | Effort |
 |---|---|---|---|---|
 | 1 | ✅ Inefficiency / quota | **The same OpenRouteService and Overpass requests are sent twice.** The Trips home card and the open trip each run their own trip plan, and neither knows the other is already fetching. Opening the next trip before its first lookup finishes doubles route requests (200/day quota), Overpass load and the OSM seeding calls. | Share one in-flight request per cache key (a module-level `Map<key, Promise>`) in `useRoutePlan`, `useRouteSupplies` and `useRouteOptions`. | S |
-| 2 | Security | **The OpenRouteService key ships inside the app** (`EXPO_PUBLIC_ORS_KEY` is built into the JavaScript bundle). Anyone can pull it out and use up the daily quota, and route planning then stops for every user. | Call OpenRouteService through a Supabase Edge Function that holds the key, checks the user is signed in and limits requests per user. | M |
+| 2 | ✅ Security | **The OpenRouteService key ships inside the app** (`EXPO_PUBLIC_ORS_KEY` is built into the JavaScript bundle). Anyone can pull it out and use up the daily quota, and route planning then stops for every user. | Call OpenRouteService through a Supabase Edge Function that holds the key, checks the user is signed in and limits requests per user. | M |
 | 3 | ✅ Security | **Any signed-in user can overwrite shared OpenStreetMap places.** `seed_osm_supply_points` is `security definer` and does `on conflict (osm_id) do update`, so one user can rename or move every butchery, add fake phone numbers, or flood the table with up to 500 rows per call. | Change it to `on conflict do nothing`, and refresh existing OSM rows only from a server-side job that fetches Overpass itself; add a per-user rate limit. | S–M |
 | 4 | Data loss risk | **Sync trusts the phone's clock and uploads blindly.** `updated_at` comes from the device, and the upload is a plain `upsert`. A phone with a wrong clock, or an old offline edit synced late, can overwrite a newer version. An offline edit to a trip deleted on another phone brings it back. | Have Supabase set `updated_at` (trigger), upload through an RPC that only updates when the copy is newer, and keep deleted-trip records so deletions win. | M |
 | 5 | ✅ Crash | **Saving a new place can crash the app.** `addSupplyPoint` copies the photo with `copySync` and nothing catches errors (e.g. phone storage full, or the picker's temporary file already gone), so an exception reaches the Save button. | Wrap the copy in `try/catch`, save the place without the photo, and say so. | S |

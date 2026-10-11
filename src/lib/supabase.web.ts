@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
+import { setAccessTokenSource } from '@/lib/api-auth';
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -20,3 +22,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: isBrowser,
   },
 });
+
+// Edge Functions (e.g. OpenRouteService) are called with the signed-in user's token.
+setAccessTokenSource(async () => (await supabase.auth.getSession()).data.session?.access_token);

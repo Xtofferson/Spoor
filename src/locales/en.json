@@ -1,6 +1,5 @@
 {
   "errors": {
-    "orsKeyMissing": "Missing EXPO_PUBLIC_ORS_KEY. Add it to .env and restart Expo.",
     "orsUnreachable": "Couldn’t reach OpenRouteService. Check your connection and try again.",
     "orsQuota": "OpenRouteService’s free daily limit has been reached. It resets within 24 hours; routes you’ve already viewed and pinned stops still work.",
     "orsLimit": "OpenRouteService limit: {{message}}",
@@ -15,7 +14,9 @@
     "suppliesBusy": "Couldn’t get fuel, water and supplies from OpenStreetMap: its servers are busy or you’re offline. Try again in a few minutes.",
     "supplies": "Couldn’t get fuel, water and supplies from OpenStreetMap.",
     "signInToDelete": "Sign in to delete places.",
-    "deleteFailed": "Couldn’t delete it. Check your connection and try again."
+    "deleteFailed": "Couldn’t delete it. Check your connection and try again.",
+    "signInForRoutes": "Sign in again to plan routes.",
+    "orsUserLimit": "You’ve planned a lot of routes today. Routes you’ve already looked at still work; try again tomorrow."
   },
   "routeOptions": {
     "pinned": "Pinned on the map",

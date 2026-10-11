@@ -1,3 +1,4 @@
+import { setAccessTokenSource } from '../api-auth';
 import { applyChosenRoutes, fetchRouteOptions, type RoutePlan } from '../route-plan';
 import type { LonLat } from '../route-math';
 
@@ -18,14 +19,22 @@ jest.mock('@/lib/storage', () => {
   };
 });
 
+// Signed in, as OpenRouteService is reached through Spoor's Edge Function with the user's token.
+beforeEach(() => setAccessTokenSource(async () => 'user-token'));
+
 type Reply = { status: number; body: unknown };
+
+/** Every request sent, with where it went and its headers. */
+let sent: { url: string; headers: Record<string, string> }[] = [];
 
 /** Answers directions requests from saved responses, and records what was asked. */
 function answerWith(reply: (request: any) => Reply) {
   const requests: any[] = [];
-  globalThis.fetch = jest.fn(async (_url: string, init: { body: string }) => {
+  sent = [];
+  globalThis.fetch = jest.fn(async (url: string, init: { body: string; headers: Record<string, string> }) => {
     const request = JSON.parse(init.body);
     requests.push(request);
+    sent.push({ url, headers: init.headers });
     const { status, body } = reply(request);
     return { ok: status < 400, status, json: async () => body };
   }) as unknown as typeof fetch;
@@ -170,5 +179,27 @@ describe('applyChosenRoutes', () => {
     const shown = applyChosenRoutes(plan, tripWith(moved));
     expect(shown.legs[1].chosen).toBeUndefined();
     expect(shown.distance).toBe(150_000);
+  });
+});
+
+describe('reaching OpenRouteService', () => {
+  it('goes through Spoor’s Edge Function with the user’s token, never an OpenRouteService key', async () => {
+    answerWith(() => ok(nataKubu));
+    await fetchRouteOptions(nata, kubu);
+    expect(sent[0].url).toBe('https://test.supabase.co/functions/v1/ors/v2/directions/driving-car/geojson');
+    expect(sent[0].headers.Authorization).toBe('Bearer user-token');
+    expect(sent[0].headers.apikey).toBeUndefined();
+  });
+
+  it('asks to sign in again when there’s no session', async () => {
+    setAccessTokenSource(async () => undefined);
+    answerWith(() => ok(nataKubu));
+    await expect(fetchRouteOptions(nata, kubu)).rejects.toThrow('Sign in again to plan routes.');
+    expect(sent).toEqual([]);
+  });
+
+  it('explains Spoor’s own daily limit per account', async () => {
+    answerWith(() => ({ status: 429, body: { error: { code: 'spoor-daily-limit', message: 'Daily limit' } } }));
+    await expect(fetchRouteOptions(nata, kubu)).rejects.toThrow(/planned a lot of routes today/);
   });
 });
