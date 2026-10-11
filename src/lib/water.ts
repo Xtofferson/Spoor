@@ -2,6 +2,7 @@
  * Water planning: how many days each stretch between water points takes, and whether the
  * water carried lasts. Pure functions only, so they can be tested without a phone.
  */
+import { t as currentT, type Translate } from './i18n';
 import {
   hoursBetween,
   stopsAlong,
@@ -11,6 +12,7 @@ import {
   type RouteLine,
   type Settlement,
   type Stretch,
+  type WaterKind,
   type WaterPoint,
 } from './route-points';
 
@@ -24,8 +26,25 @@ const AT_WATER_POINT_KM = 3;
 export type WaterStop = PlaceStop<WaterPoint>;
 
 /** Water points grouped into stops along the route, in order. */
-export function waterStopsAlong(line: RouteLine, points: WaterPoint[], settlements: Settlement[] = []): WaterStop[] {
-  return stopsAlong(line, points, (point) => point.kind, settlements);
+export function waterStopsAlong(
+  line: RouteLine,
+  points: WaterPoint[],
+  settlements: Settlement[] = [],
+  t: Translate = currentT
+): WaterStop[] {
+  return stopsAlong(line, points, (point) => waterKindLabel(point.kind, t), settlements);
+}
+
+const KIND_KEYS: Record<WaterKind, string> = {
+  'Drinking water': 'drinking',
+  'Water point': 'point',
+  'Water tap': 'tap',
+  Well: 'well',
+};
+
+/** A water point's kind in the current language, e.g. "Drinking water" or "Drinkwater". */
+export function waterKindLabel(kind: WaterKind, t: Translate = currentT): string {
+  return t(`water.kind.${KIND_KEYS[kind]}`);
 }
 
 /** Whether a stop's water needs treating: all its water points are wells or springs. */
@@ -87,26 +106,27 @@ export function waterStretches(
 }
 
 /** "1 day", "2½ days": days rounded up to the half day, as water is planned. */
-export function formatDays(days: number): string {
+export function formatDays(days: number, t: Translate = currentT): string {
   const halves = Math.max(1, Math.ceil(days * 2));
   const whole = Math.floor(halves / 2);
   const text = halves % 2 === 0 ? `${whole}` : whole === 0 ? '½' : `${whole}½`;
-  return `${text} ${halves <= 2 ? 'day' : 'days'}`;
+  // "½ day" and "1 day" are singular; "1½ days" isn't.
+  return t('water.days', { count: halves <= 2 ? 1 : 2, days: text });
 }
 
 /** What to tell the travellers about a stretch the water carried won't last, if anything. */
 export function waterAdvice(
   stretch: WaterStretch,
   { people, waterLitres }: { people: number; waterLitres: number },
-  fromNeedsTreating: boolean
+  fromNeedsTreating: boolean,
+  t: Translate = currentT
 ): string | undefined {
   if (stretch.status !== 'short') return undefined;
-  const who = `${people} ${people === 1 ? 'person' : 'people'}`;
-  const fill = fromNeedsTreating
-    ? `Fill up at ${stretch.from} (treat it first) and carry more.`
-    : `Fill up at ${stretch.from} and carry more.`;
-  return (
-    `Needs about ${Math.ceil(stretch.litresNeeded)} L of water for ${who} over ${formatDays(stretch.days)}; ` +
-    `you carry ${waterLitres} L. ${fill}`
-  );
+  return t('water.advice', {
+    litres: Math.ceil(stretch.litresNeeded),
+    people: t('water.people', { count: people }),
+    days: formatDays(stretch.days, t),
+    carried: waterLitres,
+    fill: t(fromNeedsTreating ? 'water.fillTreat' : 'water.fill', { from: stretch.from }),
+  });
 }

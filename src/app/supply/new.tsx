@@ -18,10 +18,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/lib/i18n';
 import { addSupplyPoint, useSupplyCategories } from '@/lib/supplies';
-import { newPointId, supplyFormErrors, type SupplyForm } from '@/lib/supply-points';
+import { categoryText, newPointId, supplyFormErrors, type SupplyForm } from '@/lib/supply-points';
 import { toDateString } from '@/lib/trips';
 
 /** Photos are shrunk to this width before saving, to keep uploads small on slow connections. */
@@ -29,11 +30,12 @@ const PHOTO_WIDTH = 1280;
 
 function close() {
   if (router.canGoBack()) router.back();
-  else router.replace('/route');
+  else router.replace('/');
 }
 
 export default function AddSupplyScreen() {
   const theme = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ lat?: string; lon?: string; category?: string }>();
   const latitude = Number(params.lat);
@@ -49,7 +51,7 @@ export default function AddSupplyScreen() {
   const [photo, setPhoto] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [triedSaving, setTriedSaving] = useState(false);
-  const allErrors = supplyFormErrors(form, categories);
+  const allErrors = supplyFormErrors(form, categories, t);
   const errors = triedSaving ? allErrors : {};
   const hasPlace = Number.isFinite(latitude) && Number.isFinite(longitude);
 
@@ -64,8 +66,8 @@ export default function AddSupplyScreen() {
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
-        from === 'camera' ? 'No camera access' : 'No photo access',
-        'Allow it in Settings to add a photo of this place.'
+        from === 'camera' ? t('addPlace.noCamera') : t('addPlace.noPhotos'),
+        t('addPlace.allowAccess')
       );
       return;
     }
@@ -84,7 +86,7 @@ export default function AddSupplyScreen() {
       const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
       setPhoto(saved.uri);
     } catch {
-      Alert.alert('Couldn’t use that photo', 'Try another one.');
+      Alert.alert(t('addPlace.photoFailed'), t('addPlace.photoFailedHint'));
     } finally {
       setBusy(false);
     }
@@ -117,13 +119,13 @@ export default function AddSupplyScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText type="small" themeColor="textSecondary">
           {hasPlace
-            ? `At ${latitude.toFixed(4)}, ${longitude.toFixed(4)}. Shared with everyone using Spoor; it’s saved on your phone and uploaded when you’re online.`
-            : 'Press and hold the route map where the place is to add it.'}
+            ? t('addPlace.intro', { position: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` })
+            : t('addPlace.noPosition')}
         </ThemedText>
 
         <View style={styles.section}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            What is it?
+            {t('addPlace.whatIsIt')}
           </ThemedText>
           <View style={styles.chips} accessibilityRole="radiogroup">
             {categories.map((category) => {
@@ -140,7 +142,7 @@ export default function AddSupplyScreen() {
                     pressed && styles.pressed,
                   ]}>
                   <ThemedText type="smallBold" style={{ color: selected ? '#FFFFFF' : theme.text }}>
-                    {category.emoji} {category.label}
+                    {category.emoji} {categoryText(category, t).label}
                   </ThemedText>
                 </Pressable>
               );
@@ -151,22 +153,35 @@ export default function AddSupplyScreen() {
 
         <View style={styles.section}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            Details
+            {t('addPlace.details')}
           </ThemedText>
-          <Field label="Name" value={form.name} onChangeText={set('name')} placeholder="e.g. Roadside wood seller" error={errors.name} />
-          <Field label="Phone" value={form.phone} onChangeText={set('phone')} placeholder="Optional" keyboardType="phone-pad" error={errors.phone} />
           <Field
-            label="Opening hours"
+            label={t('vehicle.name')}
+            value={form.name}
+            onChangeText={set('name')}
+            placeholder={t('addPlace.namePlaceholder')}
+            error={errors.name}
+          />
+          <Field
+            label={t('place.phone')}
+            value={form.phone}
+            onChangeText={set('phone')}
+            placeholder={t('addPlace.optional')}
+            keyboardType="phone-pad"
+            error={errors.phone}
+          />
+          <Field
+            label={t('place.hours')}
             value={form.openingHours}
             onChangeText={set('openingHours')}
-            placeholder="Optional, e.g. Mon–Sat 7–17"
+            placeholder={t('addPlace.hoursPlaceholder')}
             error={errors.openingHours}
           />
           <Field
-            label="Notes"
+            label={t('place.notes')}
             value={form.notes}
             onChangeText={set('notes')}
-            placeholder="Optional, e.g. Sells mopane by the bundle, R50"
+            placeholder={t('addPlace.notesPlaceholder')}
             error={errors.notes}
             multiline
           />
@@ -174,25 +189,25 @@ export default function AddSupplyScreen() {
 
         <View style={styles.section}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            Photo
+            {t('addPlace.photo')}
           </ThemedText>
           {photo && (
             <View>
-              <Image source={{ uri: photo }} style={styles.photo} contentFit="cover" accessibilityLabel="Photo of the place" />
+              <Image source={{ uri: photo }} style={styles.photo} contentFit="cover" accessibilityLabel={t('addPlace.photoLabel')} />
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setPhoto(undefined)}
                 hitSlop={Spacing.two}
                 style={({ pressed }) => [styles.removePhoto, pressed && styles.pressed]}>
                 <ThemedText type="smallBold" style={{ color: theme.danger }}>
-                  Remove photo
+                  {t('addPlace.removePhoto')}
                 </ThemedText>
               </Pressable>
             </View>
           )}
           <View style={styles.photoButtons}>
-            <OutlineButton label="Take photo" onPress={() => pickPhoto('camera')} disabled={busy} />
-            <OutlineButton label="Choose photo" onPress={() => pickPhoto('library')} disabled={busy} />
+            <OutlineButton label={t('addPlace.takePhoto')} onPress={() => pickPhoto('camera')} disabled={busy} />
+            <OutlineButton label={t('addPlace.choosePhoto')} onPress={() => pickPhoto('library')} disabled={busy} />
           </View>
         </View>
       </ScrollView>
@@ -207,7 +222,7 @@ export default function AddSupplyScreen() {
           onPress={close}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
           <ThemedText type="smallBold" style={{ color: theme.accent }}>
-            Cancel
+            {t('common.cancel')}
           </ThemedText>
         </Pressable>
         <Pressable
@@ -221,8 +236,8 @@ export default function AddSupplyScreen() {
             (!hasPlace || busy) && styles.disabled,
             pressed && styles.pressed,
           ]}>
-          <ThemedText type="smallBold" style={{ color: theme.background }}>
-            {busy ? 'Preparing photo…' : 'Add place'}
+          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
+            {busy ? t('addPlace.preparing') : t('addPlace.add')}
           </ThemedText>
         </Pressable>
       </View>
@@ -342,6 +357,7 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 16,
+    fontFamily: Fonts.sans,
     paddingVertical: Spacing.two,
   },
   multilineInput: {

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import type { FuelStopChoice } from '@/lib/fuel';
 import type { ChosenRoute, LonLat } from '@/lib/route-math';
+import { dateLocale } from '@/lib/i18n';
 import { storage } from '@/lib/storage';
 
 export type Stop = {
@@ -190,8 +191,9 @@ export function fromDateString(value: string) {
   return new Date(year, month - 1, day);
 }
 
-export function formatDate(value: string) {
-  return fromDateString(value).toLocaleDateString(undefined, {
+/** e.g. "10 Oct 2026". `locale` defaults to the app's language. */
+export function formatDate(value: string, locale = dateLocale()) {
+  return fromDateString(value).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -205,15 +207,15 @@ export function tripDays(startDate: string, endDate: string) {
 }
 
 /** e.g. "10 – 15 Oct 2026", or "28 Oct – 2 Nov 2026" across months. */
-export function formatDateRange(startDate: string, endDate: string) {
+export function formatDateRange(startDate: string, endDate: string, locale = dateLocale()) {
   const start = fromDateString(startDate);
   const end = fromDateString(endDate);
   const sameYear = start.getFullYear() === end.getFullYear();
   const sameMonth = sameYear && start.getMonth() === end.getMonth();
-  const startText = start.toLocaleDateString(undefined, {
+  const startText = start.toLocaleDateString(locale, {
     day: 'numeric',
     month: sameMonth ? undefined : 'short',
     year: sameYear ? undefined : 'numeric',
   });
-  return `${startText} – ${formatDate(endDate)}`;
+  return `${startText} – ${formatDate(endDate, locale)}`;
 }

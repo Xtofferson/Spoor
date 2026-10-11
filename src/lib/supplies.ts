@@ -25,6 +25,7 @@ import {
   type SupplyCategory,
   type SupplyPoint,
 } from '@/lib/supply-points';
+import { t } from '@/lib/i18n';
 
 const PHOTO_BUCKET = 'supply-photos';
 
@@ -204,7 +205,7 @@ export function useSupplySync(userId: string) {
 /** Deletes a place you added: straight away if it hasn't been uploaded, else in Supabase. */
 export async function deleteSupplyPoint(point: SupplyPoint): Promise<string | undefined> {
   const userId = currentUserId;
-  if (!userId) return 'Sign in to delete places.';
+  if (!userId) return t('errors.signInToDelete');
   if (point.pending) {
     if (point.localPhotoUri) {
       const file = new File(point.localPhotoUri);
@@ -217,7 +218,7 @@ export async function deleteSupplyPoint(point: SupplyPoint): Promise<string | un
     return undefined;
   }
   const { error } = await supabase.from('supply_points').delete().eq('id', point.id);
-  if (error) return 'Couldn’t delete it. Check your connection and try again.';
+  if (error) return t('errors.deleteFailed');
   if (point.photoPath) await supabase.storage.from(PHOTO_BUCKET).remove([point.photoPath]);
   forget(point.id);
   version.set(version.get() + 1);

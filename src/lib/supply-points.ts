@@ -3,6 +3,7 @@
  * added to Supabase's supply_categories table later. Pure functions only, so they can be
  * tested without a phone or a network.
  */
+import { t as currentT, type Translate } from './i18n';
 import type { LonLat } from './route-math';
 import {
   locateOnRoute,
@@ -108,6 +109,23 @@ export function categoryFromRow(row: CategoryRow): SupplyCategory {
     affectsCategory: row.affects_category ?? undefined,
     userCanAdd: row.user_can_add,
     sort: row.sort,
+  };
+}
+
+/**
+ * A category's name, noun and warning in the current language. Categories added in Supabase
+ * later use the table's own (English) text until they're added to en.json and af.json.
+ */
+export function categoryText(category: SupplyCategory, t: Translate = currentT) {
+  const text = (field: string, fallback: string) => {
+    const key = `supplies.categories.${category.id}.${field}`;
+    const value = t(key);
+    return value === key ? fallback : value;
+  };
+  return {
+    label: text('label', category.label),
+    noun: text('noun', category.noun),
+    routeWarning: category.routeWarning && text('routeWarning', category.routeWarning),
   };
 }
 
@@ -310,17 +328,16 @@ export function supplyGaps(line: RouteLine, stops: SupplyStop[], category: Suppl
 }
 
 /** "Last butchery before Nata → Kubu Island: 320 km without one." */
-export function gapAdvice(gap: SupplyGap): string {
+export function gapAdvice(gap: SupplyGap, t: Translate = currentT): string {
   const km = Math.round(gap.distanceKm).toLocaleString('en-US');
-  const noun = gap.category.noun;
-  return gap.hasStart
-    ? `Last ${noun} before ${km} km without one: stock up at ${gap.from}.`
-    : `No ${noun} for the first ${km} km: stock up before you leave ${gap.from}.`;
+  const { noun } = categoryText(gap.category, t);
+  return t(gap.hasStart ? 'supplies.gapAdvice' : 'supplies.gapAdviceStart', { noun, km, from: gap.from });
 }
 
 /** The card title: "Last butchery before Kubu Island", or "No butchery before Nata". */
-export function gapTitle(gap: SupplyGap): string {
-  return gap.hasStart ? `Last ${gap.category.noun} before ${gap.to}` : `No ${gap.category.noun} before ${gap.to}`;
+export function gapTitle(gap: SupplyGap, t: Translate = currentT): string {
+  const { noun } = categoryText(gap.category, t);
+  return t(gap.hasStart ? 'supplies.gapTitle' : 'supplies.gapTitleStart', { noun, to: gap.to });
 }
 
 /** A point this close to the route counts as on it, e.g. a checkpoint the road goes through. */
@@ -374,17 +391,21 @@ export type SupplyForm = {
 };
 
 /** Checks the add screen's form, returning what's wrong with it, if anything. */
-export function supplyFormErrors(form: SupplyForm, categories: SupplyCategory[]): Partial<Record<keyof SupplyForm, string>> {
+export function supplyFormErrors(
+  form: SupplyForm,
+  categories: SupplyCategory[],
+  t: Translate = currentT
+): Partial<Record<keyof SupplyForm, string>> {
   const errors: Partial<Record<keyof SupplyForm, string>> = {};
   if (!categories.some((category) => category.id === form.category && category.userCanAdd)) {
-    errors.category = 'Choose what kind of place it is.';
+    errors.category = t('supplies.errors.category');
   }
   const name = form.name.trim();
-  if (!name) errors.name = 'Give it a name, e.g. “Roadside wood seller”.';
-  else if (name.length > 120) errors.name = 'Keep the name under 120 characters.';
-  if (form.phone.trim().length > 40) errors.phone = 'Keep the phone number under 40 characters.';
-  if (form.openingHours.trim().length > 200) errors.openingHours = 'Keep the opening hours under 200 characters.';
-  if (form.notes.trim().length > 1000) errors.notes = 'Keep the notes under 1,000 characters.';
+  if (!name) errors.name = t('supplies.errors.name');
+  else if (name.length > 120) errors.name = t('supplies.errors.nameLong');
+  if (form.phone.trim().length > 40) errors.phone = t('supplies.errors.phone');
+  if (form.openingHours.trim().length > 200) errors.openingHours = t('supplies.errors.hours');
+  if (form.notes.trim().length > 1000) errors.notes = t('supplies.errors.notes');
   return errors;
 }
 

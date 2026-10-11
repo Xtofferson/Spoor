@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   RESERVE_SHARE,
@@ -17,9 +17,10 @@ import {
   type Terrain,
   type Vehicle,
 } from '@/lib/fuel';
+import { dateLocale, useT, type Translate } from '@/lib/i18n';
 import type { SavedSupplies, SuppliesState } from '@/lib/route-supplies';
 import type { SupplyPointsState } from '@/lib/supplies';
-import { gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan } from '@/lib/supply-points';
+import { categoryText, gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan } from '@/lib/supply-points';
 import {
   formatDays,
   stopNeedsTreating,
@@ -29,18 +30,17 @@ import {
   type WaterStretch,
 } from '@/lib/water';
 
-const TERRAINS: { key: Terrain; label: string }[] = [
-  { key: 'tar', label: 'Tar' },
-  { key: 'gravel', label: 'Gravel' },
-  { key: 'sand', label: 'Sand' },
-];
+const TERRAINS: Terrain[] = ['tar', 'gravel', 'sand'];
 
 const km = (value: number) => Math.round(value).toLocaleString('en-US');
 
-function vehicleSummary(vehicle: Vehicle) {
-  const cans = vehicle.jerryCanLitres > 0 ? ` + ${vehicle.jerryCanLitres} L jerry cans` : '';
+/** "Land Cruiser 79 · 130 L + 40 L jerry cans" */
+function vehicleSummary(vehicle: Vehicle, t: Translate) {
+  const cans = vehicle.jerryCanLitres > 0 ? t('fuel.plusCans', { litres: vehicle.jerryCanLitres }) : '';
   return `${vehicle.name} · ${vehicle.mainTankLitres} L${cans}`;
 }
+
+const shortDate = (time: number) => new Date(time).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 
 /** The fuel and water points found so far, saved or fresh. */
 export function suppliesFound(state: SuppliesState): SavedSupplies | undefined {
@@ -59,7 +59,7 @@ function MissingCard({ title, text, action }: { title: string; text: string; act
       </ThemedText>
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.push('/settings')}
+        onPress={() => router.push('/vehicle')}
         style={({ pressed }) => [styles.outlineButton, { borderColor: theme.accent }, pressed && styles.pressed]}>
         <ThemedText type="smallBold" style={{ color: theme.accent }}>
           {action}
@@ -74,41 +74,36 @@ function MissingCard({ title, text, action }: { title: string; text: string; act
 /** The prototype's "Fuel range" card: safe range on tar, gravel or sand. */
 export function FuelRangeCard({ vehicle, tripLitres }: { vehicle?: Vehicle; tripLitres?: number }) {
   const theme = useTheme();
+  const t = useT();
   const [terrain, setTerrain] = useState<Terrain>('tar');
 
   if (!vehicle) {
-    return (
-      <MissingCard
-        title="Fuel range"
-        text="Add your vehicle’s tank size and fuel use to see your range, how much fuel this trip needs, and which stretches between fuel stops are tight."
-        action="Add your vehicle"
-      />
-    );
+    return <MissingCard title={t('fuel.range')} text={t('fuel.addVehicleText')} action={t('me.noVehicle')} />;
   }
 
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
       <View style={styles.titleRow}>
-        <ThemedText type="smallBold">Fuel range</ThemedText>
+        <ThemedText type="heading">{t('fuel.range')}</ThemedText>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${vehicleSummary(vehicle)}. Edit vehicle`}
-          onPress={() => router.push('/settings')}
+          accessibilityLabel={`${vehicleSummary(vehicle, t)}. ${t('me.editVehicle')}`}
+          onPress={() => router.push('/vehicle')}
           hitSlop={Spacing.two}
           style={({ pressed }) => [styles.shrink, pressed && styles.pressed]}>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {vehicleSummary(vehicle)}
+            {vehicleSummary(vehicle, t)}
           </ThemedText>
         </Pressable>
       </View>
       <View style={styles.bigRow}>
         <ThemedText style={styles.big}>{Math.round(safeRangeKm(vehicle, terrain)).toLocaleString('en-US')}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.shrink}>
-          km safe range · {Math.round(RESERVE_SHARE * 100)}% reserve kept
+          {t('fuel.safeRange', { percent: Math.round(RESERVE_SHARE * 100) })}
         </ThemedText>
       </View>
-      <View style={styles.terrains} accessibilityRole="radiogroup" accessibilityLabel="Terrain">
-        {TERRAINS.map(({ key, label }) => {
+      <View style={styles.terrains} accessibilityRole="radiogroup" accessibilityLabel={t('fuel.terrain.label')}>
+        {TERRAINS.map((key) => {
           const selected = key === terrain;
           return (
             <Pressable
@@ -122,7 +117,7 @@ export function FuelRangeCard({ vehicle, tripLitres }: { vehicle?: Vehicle; trip
                 pressed && styles.pressed,
               ]}>
               <ThemedText type="smallBold" style={{ color: selected ? theme.background : theme.text }}>
-                {label}
+                {t(`fuel.terrain.${key}`)}
               </ThemedText>
             </Pressable>
           );
@@ -130,11 +125,7 @@ export function FuelRangeCard({ vehicle, tripLitres }: { vehicle?: Vehicle; trip
       </View>
       {tripLitres !== undefined && (
         <ThemedText type="small" themeColor="textSecondary">
-          This trip needs about{' '}
-          <ThemedText type="smallBold" style={styles.mono}>
-            {Math.round(tripLitres).toLocaleString('en-US')} L
-          </ThemedText>{' '}
-          of fuel, from each leg’s tar, gravel and unpaved mix.
+          {t('fuel.tripNeeds', { litres: Math.round(tripLitres).toLocaleString('en-US') })}
         </ThemedText>
       )}
     </ThemedView>
@@ -153,10 +144,11 @@ export function FuelStretchList({
   supplies: SuppliesState;
   stopCount: number;
 }) {
+  const t = useT();
   const found = suppliesFound(supplies);
   return (
     <View style={styles.list}>
-      <ThemedText type="smallBold">Between fuel stops</ThemedText>
+      <ThemedText type="heading">{t('fuel.between')}</ThemedText>
       {found && vehicle &&
         stretches.map((stretch, index) => {
           const percent = Math.round(stretch.shareOfRange * 100);
@@ -170,15 +162,14 @@ export function FuelStretchList({
               distanceKm={stretch.distanceKm}
               share={stretch.shareOfRange}
               tone={stretch.status === 'over' ? 'danger' : stretch.status === 'tight' ? 'warning' : 'ok'}
-              detail={`${percent}% of range · about ${Math.round(stretch.litres)} L`}
-              advice={stretchAdvice(stretch, vehicle)}
+              detail={t('fuel.stretchDetail', { percent, litres: Math.round(stretch.litres) })}
+              advice={stretchAdvice(stretch, vehicle, t)}
             />
           );
         })}
       {found && !vehicle && (
         <ThemedText type="small" themeColor="textSecondary">
-          Found {stopCount} fuel {stopCount === 1 ? 'stop' : 'stops'} along the route. Add your vehicle to see how much
-          of your range each stretch between them uses.
+          {t('fuel.foundNoVehicle', { count: stopCount })}
         </ThemedText>
       )}
     </View>
@@ -197,27 +188,29 @@ export function FuelStopPicker({
   onToggleStop: (stop: FuelStop) => void;
 }) {
   const theme = useTheme();
+  const t = useT();
   const chosenCount = rows.filter((row) => row.choice).length;
   if (rows.length === 0) return null;
 
   return (
     <View style={styles.list}>
-      <ThemedText type="smallBold">Where to fill up</ThemedText>
+      <ThemedText type="heading">{t('fuel.whereToFill')}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
-        {chosenCount > 0
-          ? `Fuel is planned between the ${chosenCount} ${chosenCount === 1 ? 'town' : 'towns'} you ticked.`
-          : 'Tick the towns you’ll fill up at. Until you do, every place with fuel is counted.'}
+        {chosenCount > 0 ? t('fuel.plannedBetween', { count: chosenCount }) : t('fuel.tickTowns')}
       </ThemedText>
       <ThemedView type="backgroundElement" style={styles.picker}>
         {rows.map((row, index) => {
           const chosen = !!row.choice;
-          const from = row.afterStopKm < 1 ? `At ${row.afterStop}` : `${km(row.afterStopKm)} km from ${row.afterStop}`;
+          const from =
+            row.afterStopKm < 1
+              ? t('fuel.atPlace', { place: row.afterStop })
+              : t('fuel.kmFrom', { km: km(row.afterStopKm), place: row.afterStop });
           return (
             <Pressable
               key={`${row.stop.label}-${row.km}`}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: chosen }}
-              accessibilityLabel={`${row.stop.label}, ${from}. Fill up here`}
+              accessibilityLabel={`${row.stop.label}, ${from}. ${t('fuel.fillHere')}`}
               onPress={() => onToggleStop(row.stop)}
               style={({ pressed }) => [
                 styles.stopRow,
@@ -267,12 +260,13 @@ function halfDaysDown(days: number): string {
 /** How much water is carried, for how many people, and how long it lasts. */
 export function WaterCard({ vehicle, people }: { vehicle?: Vehicle; people: number }) {
   const theme = useTheme();
+  const t = useT();
   if (vehicle?.waterLitres === undefined) {
     return (
       <MissingCard
-        title="Water"
-        text={`Add how much drinking water you carry to see which stretches between water points it won’t last, at ${WATER_PER_PERSON_PER_DAY} L per person per day.`}
-        action={vehicle ? 'Add water carried' : 'Add your vehicle'}
+        title={t('supplies.water')}
+        text={t('water.addText', { litres: WATER_PER_PERSON_PER_DAY })}
+        action={vehicle ? t('water.addCarried') : t('me.noVehicle')}
       />
     );
   }
@@ -280,26 +274,26 @@ export function WaterCard({ vehicle, people }: { vehicle?: Vehicle; people: numb
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
       <View style={styles.titleRow}>
-        <ThemedText type="smallBold">Water</ThemedText>
+        <ThemedText type="heading">{t('supplies.water')}</ThemedText>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${vehicle.waterLitres} litres carried. Edit vehicle`}
-          onPress={() => router.push('/settings')}
+          accessibilityLabel={`${t('water.carried', { litres: vehicle.waterLitres })}. ${t('me.editVehicle')}`}
+          onPress={() => router.push('/vehicle')}
           hitSlop={Spacing.two}
           style={({ pressed }) => [styles.shrink, pressed && styles.pressed]}>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {vehicle.waterLitres} L carried · {people} {people === 1 ? 'person' : 'people'}
+            {t('water.carried', { litres: vehicle.waterLitres })} · {t('water.people', { count: people })}
           </ThemedText>
         </Pressable>
       </View>
       <View style={styles.bigRow}>
         <ThemedText style={[styles.big, { color: theme.text }]}>{halfDaysDown(lastsDays)}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.shrink}>
-          days of water at {WATER_PER_PERSON_PER_DAY} L per person per day
+          {t('water.daysOfWater', { litres: WATER_PER_PERSON_PER_DAY })}
         </ThemedText>
       </View>
       <ThemedText type="small" themeColor="textSecondary">
-        People on this trip are set when editing the trip.
+        {t('water.peopleHint')}
       </ThemedText>
     </ThemedView>
   );
@@ -319,15 +313,15 @@ export function WaterStretchList({
   stops: WaterStop[];
   supplies: SuppliesState;
 }) {
+  const t = useT();
   const found = suppliesFound(supplies);
   const waterLitres = vehicle?.waterLitres;
   return (
     <View style={styles.list}>
-      <ThemedText type="smallBold">Between water points</ThemedText>
+      <ThemedText type="heading">{t('water.between')}</ThemedText>
       {found && stops.length === 0 && (
         <ThemedText type="small" themeColor="textSecondary">
-          OpenStreetMap has no water points within 5 km of this route, so the whole trip is one stretch. Towns and fuel
-          stations often sell water: check locally.
+          {t('water.noneFound')}
         </ThemedText>
       )}
       {found &&
@@ -344,8 +338,12 @@ export function WaterStretchList({
               distanceKm={stretch.distanceKm}
               share={waterLitres > 0 ? stretch.litresNeeded / waterLitres : Infinity}
               tone={stretch.status === 'short' ? 'warning' : 'ok'}
-              detail={`About ${formatDays(stretch.days)} · needs ${Math.ceil(stretch.litresNeeded)} L of ${waterLitres} L`}
-              advice={waterAdvice(stretch, { people, waterLitres }, !!fromStop && stopNeedsTreating(fromStop))}
+              detail={t('water.stretchDetail', {
+                days: formatDays(stretch.days, t),
+                litres: Math.ceil(stretch.litresNeeded),
+                carried: waterLitres,
+              })}
+              advice={waterAdvice(stretch, { people, waterLitres }, !!fromStop && stopNeedsTreating(fromStop), t)}
             />
           );
         })}
@@ -369,24 +367,23 @@ export function SupplyWarnings({
   points: SupplyPointsState;
 }) {
   const theme = useTheme();
+  const t = useT();
   if (!plan) return null;
-  const counts = categories
-    .map((category) => `${category.emoji} ${category.label} ${plan.stopsByCategory[category.id]?.length ?? 0}`)
-    .join(' · ');
-
+  if (plan.crossings.length === 0 && plan.gaps.length === 0 && points.status !== 'offline' && points.pending.length === 0) {
+    return null;
+  }
   return (
     <View style={styles.list}>
-      <ThemedText type="smallBold">Supplies along the way</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {counts}. Press and hold the map to add a place, e.g. a roadside wood seller or a checkpoint.
-      </ThemedText>
+      <ThemedText type="heading">{t('supplies.alongTheWay')}</ThemedText>
 
       {plan.crossings.map((crossing) => {
+        const text = categoryText(crossing.category, t);
         const affected = categories.find((c) => c.id === crossing.category.affectsCategory);
-        const next = affected
+        const noun = affected && categoryText(affected, t).noun;
+        const next = noun
           ? crossing.nextAfter
-            ? ` Next ${affected.noun} after it: ${crossing.nextAfter.label}, ${km(crossing.nextAfter.km)} km on.`
-            : ` There’s no ${affected.noun} after it on this route.`
+            ? ` ${t('supplies.nextAfter', { noun, place: crossing.nextAfter.label, km: km(crossing.nextAfter.km) })}`
+            : ` ${t('supplies.noneAfter', { noun })}`
           : '';
         return (
           <ThemedView
@@ -394,7 +391,7 @@ export function SupplyWarnings({
             type="backgroundElement"
             style={styles.stretch}
             accessible
-            accessibilityLabel={`${crossing.category.label}, ${crossing.point.name}, km ${km(crossing.km)}. ${crossing.category.routeWarning}${next}`}>
+            accessibilityLabel={`${text.label}, ${crossing.point.name}, km ${km(crossing.km)}. ${text.routeWarning}${next}`}>
             <View style={styles.titleRow}>
               <ThemedText style={styles.stretchName}>
                 {crossing.category.emoji} {crossing.point.name}
@@ -402,11 +399,11 @@ export function SupplyWarnings({
               <ThemedText style={styles.mono}>km {km(crossing.km)}</ThemedText>
             </View>
             <ThemedText type="small" themeColor="textSecondary">
-              {crossing.category.label} on your route
+              {t('supplies.onYourRoute', { label: text.label })}
             </ThemedText>
             <View style={[styles.advice, { backgroundColor: theme.dangerBackground }]}>
               <ThemedText type="small" style={{ color: theme.dangerText }}>
-                {crossing.category.routeWarning}
+                {text.routeWarning}
                 {next}
               </ThemedText>
             </View>
@@ -417,7 +414,7 @@ export function SupplyWarnings({
       {plan.gaps.map((gap) => (
         <StretchCard
           key={`${gap.category.id}-${gap.startKm}`}
-          title={gapTitle(gap)}
+          title={gapTitle(gap, t)}
           from={gap.from}
           to={gap.to}
           startKm={gap.startKm}
@@ -426,21 +423,20 @@ export function SupplyWarnings({
           share={1}
           tone="warning"
           detail=""
-          advice={gapAdvice(gap)}
+          advice={gapAdvice(gap, t)}
         />
       ))}
 
       {points.status === 'offline' && (
         <ThemedText type="small" themeColor="textSecondary">
           {points.fetchedAt
-            ? `Offline: showing places saved on ${new Date(points.fetchedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}.`
-            : 'Offline: places added by travellers will show once you’re online.'}
+            ? t('supplies.offlineSaved', { date: shortDate(points.fetchedAt) })
+            : t('supplies.offlineNone')}
         </ThemedText>
       )}
       {points.pending.length > 0 && (
         <ThemedText type="small" themeColor="textSecondary">
-          {points.pending.length} {points.pending.length === 1 ? 'place' : 'places'} you added will upload when you’re
-          online.
+          {t('supplies.pendingUpload', { count: points.pending.length })}
         </ThemedText>
       )}
     </View>
@@ -462,6 +458,7 @@ export function SuppliesStatus({
   onRefresh: () => void;
 }) {
   const theme = useTheme();
+  const t = useT();
   const found = suppliesFound(supplies);
   return (
     <View style={styles.list}>
@@ -469,33 +466,34 @@ export function SuppliesStatus({
         <View style={styles.row}>
           <ActivityIndicator color={theme.accent} />
           <ThemedText type="small" themeColor="textSecondary">
-            Finding fuel and water within 5 km of the route…
+            {t('supplies.finding')}
           </ThemedText>
         </View>
       )}
       {supplies.status === 'error' && (
         <ThemedText type="small" style={{ color: theme.danger }} accessibilityRole="alert">
           {supplies.message}
-          {found ? ' Showing what was saved earlier.' : ''}
+          {found ? ` ${t('supplies.showingSaved')}` : ''}
         </ThemedText>
       )}
       {found && (
         <View style={styles.sourceRow}>
           <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-            {fuelStops} fuel {fuelStops === 1 ? 'stop' : 'stops'} and {waterStops} water{' '}
-            {waterStops === 1 ? 'point' : 'points'} from OpenStreetMap, checked{' '}
-            {new Date(found.fetchedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}. Assumes you
-            fill up at each planned fuel stop and every water point. They can close or run dry: check locally.
+            {t('supplies.source', {
+              fuel: t('supplies.fuelStops', { count: fuelStops }),
+              water: t('supplies.waterPoints', { count: waterStops }),
+              date: shortDate(found.fetchedAt),
+            })}
           </ThemedText>
           {supplies.status !== 'loading' && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Look up fuel and water again"
+              accessibilityLabel={t('supplies.refreshLabel')}
               onPress={onRefresh}
               hitSlop={Spacing.two}
               style={({ pressed }) => pressed && styles.pressed}>
               <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                Refresh
+                {t('supplies.refresh')}
               </ThemedText>
             </Pressable>
           )}
@@ -533,6 +531,7 @@ function StretchCard({
   advice?: string;
 }) {
   const theme = useTheme();
+  const t = useT();
   const percent = Math.min(Math.round(share * 100), 100);
   const barColor = tone === 'danger' ? theme.danger : tone === 'warning' ? theme.warning : theme.accent;
   const [adviceBackground, adviceText] =
@@ -543,7 +542,7 @@ function StretchCard({
       type="backgroundElement"
       style={styles.stretch}
       accessible
-      accessibilityLabel={`${title ? `${title}. ` : ''}${from} to ${to}, ${Math.round(distanceKm)} km. ${advice ?? detail}`}>
+      accessibilityLabel={`${title ? `${title}. ` : ''}${t('supplies.stretchLabel', { from, to, km: Math.round(distanceKm) })} ${advice ?? detail}`}>
       {title && <ThemedText type="smallBold">{title}</ThemedText>}
       <View style={styles.titleRow}>
         <ThemedText style={styles.stretchName}>
@@ -581,7 +580,7 @@ const styles = StyleSheet.create({
   },
   card: {
     gap: 12,
-    borderRadius: Spacing.three,
+    borderRadius: Radius.card,
     padding: Spacing.three,
   },
   titleRow: {
@@ -629,7 +628,7 @@ const styles = StyleSheet.create({
   },
   stretch: {
     gap: Spacing.two,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     paddingHorizontal: Spacing.three,
     paddingVertical: 14,
   },

@@ -1,0 +1,429 @@
+{
+  "errors": {
+    "orsKeyMissing": "Missing EXPO_PUBLIC_ORS_KEY. Add it to .env and restart Expo.",
+    "orsUnreachable": "Couldn’t reach OpenRouteService. Check your connection and try again.",
+    "orsQuota": "OpenRouteService’s free daily limit has been reached. It resets within 24 hours; routes you’ve already viewed and pinned stops still work.",
+    "orsLimit": "OpenRouteService limit: {{message}}",
+    "orsTooFar": "OpenRouteService can’t plan routes over 6,000 km. If your trip is shorter, a stop was probably found in the wrong country: add the country to its name, e.g. “Nata, Botswana”, or pin it on the map.",
+    "ors": "OpenRouteService: {{message}}",
+    "placeNotFound": "Couldn’t find “{{name}}”. Try a fuller name, e.g. a town or lodge.",
+    "noRoute": "OpenRouteService didn’t return a route.",
+    "noRouteForLeg": "OpenRouteService didn’t return a route for this leg.",
+    "routeOptions": "Couldn’t load route options.",
+    "routePlan": "Something went wrong planning this route.",
+    "placeSearch": "Couldn’t look up places right now.",
+    "suppliesBusy": "Couldn’t get fuel, water and supplies from OpenStreetMap: its servers are busy or you’re offline. Try again in a few minutes.",
+    "supplies": "Couldn’t get fuel, water and supplies from OpenStreetMap.",
+    "signInToDelete": "Sign in to delete places.",
+    "deleteFailed": "Couldn’t delete it. Check your connection and try again."
+  },
+  "routeOptions": {
+    "pinned": "Pinned on the map",
+    "noShortest": "Couldn’t get the shortest route: {{message}}",
+    "borderTooFar": "This leg crosses a border, but OpenRouteService can only route around a border post when the stops are within 150 km of each other in a straight line (these are {{km}} km apart). To compare crossings, add a stop on each side of the border.",
+    "noOtherBorder": "Couldn’t find a route through a different border crossing.",
+    "sameRoad": "The other routes OpenRouteService found were practically the same road, so there’s only one option here.",
+    "otherBorder": "Different border crossing",
+    "via": "Via {{road}}",
+    "numbered": "Route {{number}}",
+    "fastest": "Fastest",
+    "shortest": "Shortest",
+    "kmUnpaved": "{{km}} km unpaved",
+    "kmGravel": "{{km}} km gravel",
+    "allTar": "All tar",
+    "kmUnknown": "{{km}} km surface unknown",
+    "legGone": "This leg is no longer part of the trip.",
+    "use": "Use: {{name}}",
+    "fromTo": "{{from}} to {{to}}",
+    "asking": "Asking OpenRouteService for other routes…",
+    "onlyOne": "OpenRouteService found only one sensible route for this leg.",
+    "lookAgain": "Look up routes again",
+    "useDefault": "Go back to the default route",
+    "currentChoice": "Your current choice"
+  },
+  "units": {
+    "hours": "{{hours}} h",
+    "minutes": "{{minutes}} min",
+    "hoursMinutes": "{{hours}} h {{minutes}} min"
+  },
+  "vehicle": {
+    "errors": {
+      "name": "Give the vehicle a name.",
+      "litres": "Enter litres between {{min}} and {{max}}.",
+      "rate": "Enter litres per 100 km between 2 and 80."
+    },
+    "intro": "Used to plan fuel and water for your trips. Saved with your account.",
+    "name": "Name",
+    "namePlaceholder": "e.g. Land Cruiser 79",
+    "capacity": "Fuel capacity",
+    "mainTank": "Main tank",
+    "jerryCans": "Jerry cans, all together",
+    "jerryCansPlaceholder": "40, or leave blank for none",
+    "consumption": "Fuel use",
+    "water": "Drinking water carried",
+    "safeRange": "Safe range",
+    "safeRangeNote": "Tank and jerry cans, keeping {{percent}}% in reserve.",
+    "save": "Save vehicle"
+  },
+  "fuel": {
+    "station": "Fuel station",
+    "adviceOver": "Needs about {{litres}} L, more than your safe range ({{usable}} L with the 20% reserve). Carry extra fuel or find fuel before {{to}}.",
+    "adviceTightCans": "Uses {{percent}}% of range — fill the jerry cans at {{from}}.",
+    "adviceTight": "Uses {{percent}}% of range — fill up at {{from}}, and consider carrying extra fuel.",
+    "plusCans": " + {{litres}} L jerry cans",
+    "range": "Fuel range",
+    "addVehicleText": "Add your vehicle’s tank size and fuel use to see your range, how much fuel this trip needs, and which stretches between fuel stops are tight.",
+    "safeRange": "km safe range · {{percent}}% reserve kept",
+    "terrain": {
+      "label": "Road type",
+      "tar": "Tar",
+      "gravel": "Gravel",
+      "sand": "Sand"
+    },
+    "tripNeeds": "This trip needs about {{litres}} L of fuel, from each leg’s tar, gravel and unpaved mix.",
+    "between": "Between fuel stops",
+    "stretchDetail": "{{percent}}% of range · about {{litres}} L",
+    "foundNoVehicle": {
+      "one": "Found {{count}} fuel stop along the route. Add your vehicle to see how much of your range each stretch uses.",
+      "other": "Found {{count}} fuel stops along the route. Add your vehicle to see how much of your range each stretch between them uses."
+    },
+    "whereToFill": "Where to fill up",
+    "plannedBetween": {
+      "one": "Fuel is planned between the {{count}} town you ticked.",
+      "other": "Fuel is planned between the {{count}} towns you ticked."
+    },
+    "tickTowns": "Tick the towns you’ll fill up at. Until you do, every place with fuel is counted.",
+    "atPlace": "At {{place}}",
+    "kmFrom": "{{km}} km from {{place}}",
+    "fillHere": "Fill up here"
+  },
+  "water": {
+    "kind": {
+      "drinking": "Drinking water",
+      "point": "Water point",
+      "tap": "Water tap",
+      "well": "Well"
+    },
+    "days": {
+      "one": "{{days}} day",
+      "other": "{{days}} days"
+    },
+    "people": {
+      "one": "{{count}} person",
+      "other": "{{count}} people"
+    },
+    "advice": "Needs about {{litres}} L of water for {{people}} over {{days}}; you carry {{carried}} L. {{fill}}",
+    "fillTreat": "Fill up at {{from}} (treat it first) and carry more.",
+    "fill": "Fill up at {{from}} and carry more.",
+    "drinking": "Drinking water",
+    "mayNeedTreating": "May need treating",
+    "notForDrinking": "Mapped as not for drinking",
+    "addText": "Add how much drinking water you carry to see which stretches between water points it won’t last, at {{litres}} L per person per day.",
+    "addCarried": "Add water carried",
+    "carried": "{{litres}} L carried",
+    "daysOfWater": "days of water at {{litres}} L per person per day",
+    "peopleHint": "Set the number of people when you edit the trip.",
+    "between": "Between water points",
+    "noneFound": "OpenStreetMap has no water points within 5 km of this route, so the whole trip is one stretch. Towns and fuel stations often sell water: check locally.",
+    "stretchDetail": "About {{days}} · needs {{litres}} L of {{carried}} L"
+  },
+  "supplies": {
+    "gapAdvice": "Last {{noun}} before {{km}} km without one: stock up at {{from}}.",
+    "gapAdviceStart": "No {{noun}} for the first {{km}} km: stock up before you leave {{from}}.",
+    "gapTitle": "Last {{noun}} before {{to}}",
+    "gapTitleStart": "No {{noun}} before {{to}}",
+    "errors": {
+      "category": "Choose what kind of place it is.",
+      "name": "Give it a name, e.g. “Roadside wood seller”.",
+      "nameLong": "Keep the name under 120 characters.",
+      "phone": "Keep the phone number under 40 characters.",
+      "hours": "Keep the opening hours under 200 characters.",
+      "notes": "Keep the notes under 1,000 characters."
+    },
+    "categories": {
+      "butcher": {
+        "label": "Butchery",
+        "noun": "butchery"
+      },
+      "firewood": {
+        "label": "Firewood",
+        "noun": "firewood"
+      },
+      "vet_checkpoint": {
+        "label": "Veterinary checkpoint",
+        "noun": "veterinary checkpoint",
+        "routeWarning": "Fresh meat may be confiscated here. Buy meat after this checkpoint."
+      }
+    },
+    "fuel": "Fuel",
+    "water": "Water",
+    "fuelAt": "Fuel · {{place}}",
+    "notUploaded": "Not uploaded yet",
+    "fromOsm": "From OpenStreetMap",
+    "addedByTraveller": "Added by a traveller",
+    "tapForDetails": "Tap for details",
+    "longPressHint": "Press and hold the map to add a place, like a roadside wood seller or a checkpoint.",
+    "alongTheWay": "Butcheries, firewood and checkpoints",
+    "nextAfter": "Next {{noun}} after it: {{place}}, {{km}} km on.",
+    "noneAfter": "There’s no {{noun}} after it on this route.",
+    "onYourRoute": "{{label}} on your route",
+    "offlineSaved": "Offline: showing places saved on {{date}}.",
+    "offlineNone": "Offline: places added by travellers will show once you’re online.",
+    "pendingUpload": {
+      "one": "{{count}} place you added will upload when you’re online.",
+      "other": "{{count}} places you added will upload when you’re online."
+    },
+    "finding": "Finding fuel, water and supplies near the route…",
+    "showingSaved": "Showing what was saved earlier.",
+    "source": "{{fuel}} and {{water}} from OpenStreetMap, checked {{date}}. Assumes you fill up at each planned fuel stop and every water point. They can close or run dry: check locally.",
+    "fuelStops": {
+      "one": "{{count}} fuel stop",
+      "other": "{{count}} fuel stops"
+    },
+    "waterPoints": {
+      "one": "{{count}} water point",
+      "other": "{{count}} water points"
+    },
+    "refresh": "Refresh",
+    "refreshLabel": "Look up fuel, water and supplies again",
+    "stretchLabel": "{{from}} to {{to}}, {{km}} km.",
+    "onTheRoute": {
+      "one": "{{count}} on the route",
+      "other": "{{count}} on the route"
+    },
+    "gapNote": "{{title}}: {{from}}",
+    "waterNote": "Water: carry enough for {{days}} without a water point ({{people}} × {{perDay}} litres × {{days}} = {{litres}} litres)"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "save": "Save",
+    "delete": "Delete",
+    "comingSoon": "Coming soon"
+  },
+  "tabs": {
+    "trips": "Trips",
+    "community": "Community",
+    "maps": "Maps",
+    "me": "Me"
+  },
+  "tripTabs": {
+    "route": "Route",
+    "supplies": "Supplies",
+    "camps": "Camps",
+    "prep": "Prep",
+    "friends": "Friends"
+  },
+  "screens": {
+    "newTrip": "New trip",
+    "editTrip": "Edit trip",
+    "routeOptions": "Route options",
+    "vehicle": "Vehicle",
+    "addPlace": "Add a place",
+    "place": "Place"
+  },
+  "sync": {
+    "idle": "",
+    "syncing": "Syncing…",
+    "synced": "All trips synced",
+    "offline": "Offline · changes will sync when you’re back online",
+    "error": "Couldn’t sync · will try again"
+  },
+  "trips": {
+    "planNew": "+ Plan a new trip",
+    "empty": "No trips yet. Plan one to see it here.",
+    "days": {
+      "one": "{{count}} day",
+      "other": "{{count}} days"
+    },
+    "stops": {
+      "one": "{{count}} stop",
+      "other": "{{count}} stops"
+    },
+    "openHint": "Opens the trip"
+  },
+  "trip": {
+    "notFoundTitle": "Trip not found",
+    "notFound": "This trip isn’t on your phone any more. It may have been deleted.",
+    "editLabel": "Edit {{name}}",
+    "back": "Back to trips",
+    "sections": "Trip sections"
+  },
+  "route": {
+    "needsStops": "Give this trip a start and an end to see the route. Tap the pencil at the top.",
+    "finding": "Finding the stops and the route…",
+    "showingSaved": "Showing the last saved route.",
+    "totalDistance": "Total distance",
+    "drivingTime": "Driving time",
+    "drivingTimeNote": "Driving time is OpenRouteService’s estimate, without stops. Gravel and sand roads usually take longer.",
+    "roadSurface": "Road surface",
+    "legs": "Legs",
+    "legsHint": "Tap a leg to compare other routes for it.",
+    "legLabel": "{{from}} to {{to}}, {{summary}}. Route options",
+    "yourChoice": "{{name}} · your choice",
+    "matchedPlaces": "Matched places",
+    "matchedPlacesHint": "If a stop landed in the wrong place, edit the trip and either give it a fuller name, e.g. “Nata, Botswana”, or use Pick on map to pin the exact spot.",
+    "refresh": "Refresh route",
+    "fuelWarning": "Fuel: {{advice}}",
+    "compare": "Compare routes",
+    "drivingTimeTotal": "Driving time: {{time}}."
+  },
+  "camps": {
+    "about": "Find and save places to sleep along your route: campsites, lodges and bush camps.",
+    "book": "Book"
+  },
+  "prep": {
+    "about": "Checklists to get you and the vehicle ready: permits, spares, food and kit."
+  },
+  "friends": {
+    "about": "Share this trip with the people travelling with you, so everyone sees the same plan.",
+    "whatsapp": "Share on WhatsApp"
+  },
+  "community": {
+    "about": "Tips, road reports and places shared by other overlanders."
+  },
+  "maps": {
+    "title": "Offline maps",
+    "about": "Download maps for your trip so you can find your way without signal."
+  },
+  "me": {
+    "profile": "Profile",
+    "signedInAs": "Signed in as",
+    "vehicle": "Vehicle",
+    "editVehicle": "Edit your vehicle",
+    "noVehicle": "Add your vehicle",
+    "noVehicleHint": "Tank size and fuel use, for planning fuel and water.",
+    "vehicleSummary": "{{tank}} L of fuel · {{water}} L of water",
+    "language": "Language",
+    "languagePhone": "Same as my phone",
+    "settings": "Settings",
+    "sync": "Sync trips",
+    "syncNow": "Sync now",
+    "version": "Spoor version {{version}}",
+    "signOut": "Sign out",
+    "signOutConfirmTitle": "Sign out?",
+    "signOutConfirm": "Your trips stay saved in your account. Sign in again to see them.",
+    "name": "Your name",
+    "namePlaceholder": "For the greeting on the Trips tab",
+    "nameNotSaved": "Name not saved",
+    "nameNotSavedHint": "Check your connection and try again."
+  },
+  "tripForm": {
+    "origin": "Origin",
+    "destination": "Destination",
+    "stop": "Stop {{number}}",
+    "deleteTitle": "Delete this trip?",
+    "deleteMessage": "“{{name}}” will be removed from this phone and your account.",
+    "deleteTrip": "Delete trip",
+    "pinnedName": "Pinned location",
+    "name": "Trip name",
+    "namePlaceholder": "e.g. Joburg to Kubu Island",
+    "people": "People on trip",
+    "peopleHint": "For planning water",
+    "fewerPeople": "One fewer person",
+    "morePeople": "One more person",
+    "route": "Route · {{days}}",
+    "moveUp": "Move {{stop}} up",
+    "moveDown": "Move {{stop}} down",
+    "remove": "Remove {{stop}}",
+    "movePin": "Move pin",
+    "removePin": "Remove pin",
+    "removePinFrom": "Remove map pin from {{stop}}",
+    "pickOnMap": "Pick on map",
+    "pickStopOnMap": "Pick {{stop}} on the map",
+    "pickTitle": "Pick: {{stop}}",
+    "arrives": "Arrives",
+    "leaves": "Leaves",
+    "addStop": "+ Add stop",
+    "saveChanges": "Save changes",
+    "saveTrip": "Save trip",
+    "searching": "Searching…",
+    "noMatches": "No matches. Try adding the country, e.g. “Nata, Botswana”, or use Pick on map.",
+    "notListed": "Not listed? Add the country, e.g. “Nata, Botswana”."
+  },
+  "addPlace": {
+    "noCamera": "No camera access",
+    "noPhotos": "No photo access",
+    "allowAccess": "Allow it in Settings to add a photo of this place.",
+    "photoFailed": "Couldn’t use that photo",
+    "photoFailedHint": "Try another one.",
+    "intro": "At {{position}}. Shared with everyone using Spoor; it’s saved on your phone and uploaded when you’re online.",
+    "noPosition": "Press and hold the map on a trip’s Supplies tab where the place is to add it.",
+    "whatIsIt": "What is it?",
+    "details": "Details",
+    "namePlaceholder": "e.g. Roadside wood seller",
+    "optional": "Optional",
+    "hoursPlaceholder": "Optional, e.g. Mon–Sat 7–17",
+    "notesPlaceholder": "Optional, e.g. Sells mopane by the bundle, R50",
+    "photo": "Photo",
+    "photoLabel": "Photo of the place",
+    "removePhoto": "Remove photo",
+    "takePhoto": "Take photo",
+    "choosePhoto": "Choose photo",
+    "preparing": "Preparing photo…",
+    "add": "Add place"
+  },
+  "place": {
+    "notFound": "This place isn’t on the map any more.",
+    "deleteTitle": "Delete this place?",
+    "deleteMessage": "“{{name}}” will be removed for everyone.",
+    "notDeleted": "Not deleted",
+    "photoOf": "Photo of {{name}}",
+    "phone": "Phone",
+    "hours": "Opening hours",
+    "notes": "Notes",
+    "source": "Source",
+    "addedByYou": "Added by you",
+    "lastConfirmed": "Last confirmed",
+    "notKnown": "Not known",
+    "location": "Location",
+    "deleting": "Deleting…",
+    "delete": "Delete this place"
+  },
+  "signIn": {
+    "checkEmail": "Check your email and tap the confirmation link, then sign in here.",
+    "createIntro": "Create an account to sync your trips.",
+    "intro": "Sign in to see your trips.",
+    "email": "Email",
+    "password": "Password",
+    "newPassword": {
+      "one": "Password (at least {{count}} character)",
+      "other": "Password (at least {{count}} characters)"
+    },
+    "createAccount": "Create account",
+    "signIn": "Sign in",
+    "haveAccount": "Already have an account?",
+    "newHere": "New to Spoor?",
+    "createAnAccount": "Create an account"
+  },
+  "surface": {
+    "tar": "Tar",
+    "gravel": "Gravel",
+    "unpaved": "Unpaved",
+    "unknown": "Unknown"
+  },
+  "picker": {
+    "usePin": "Use pin",
+    "moveHint": "Tap elsewhere or drag the pin to move it.",
+    "dropHint": "Tap the map to drop a pin. Pinch to zoom in.",
+    "satellite": "Satellite"
+  },
+  "map": {
+    "webOnly": "The map is only available in the phone app for now."
+  },
+  "home": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "greetingName": "{{greeting}}, {{name}}",
+    "next": "Next trip",
+    "open": "Open trip",
+    "plan": "Plan a new trip",
+    "past": "Past trips",
+    "upcoming": "Upcoming trips",
+    "noFuelFor": "No fuel for {{km}} km",
+    "waterShort": "Not enough water for {{days}}",
+    "onRoute": "{{label}} on the route",
+    "noSupplyFor": "No {{noun}} for {{km}} km"
+  }
+}

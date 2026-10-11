@@ -7,26 +7,21 @@ import { RouteMap, type MapLine } from '@/components/route-map';
 import { SurfaceBar, SurfaceLegend } from '@/components/surface-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BorderWidth, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/lib/i18n';
 import { choiceFitsLeg, formatDistance, formatDuration, type RouteTag } from '@/lib/route-math';
 import { applyChosenRoutes, useRouteOptions, useRoutePlan, type RouteOption } from '@/lib/route-plan';
 import { saveTrip, useTrip } from '@/lib/trips';
 
-/** Tag colours from the prototype: [background, text]. */
-const TAG_COLORS: Record<RouteTag['kind'], [string, string]> = {
-  good: ['#D6EEE6', '#0A403B'],
-  warn: ['#FCEBC7', '#5A3A00'],
-  plain: ['#E3E6E1', '#1C211E'],
-};
-
 function close() {
   if (router.canGoBack()) router.back();
-  else router.replace('/route');
+  else router.replace('/trips');
 }
 
 export default function RouteOptionsScreen() {
   const theme = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const params = useLocalSearchParams<{ tripId: string; leg: string }>();
@@ -106,25 +101,54 @@ export default function RouteOptionsScreen() {
   if (!trip || !from || !to) {
     return (
       <ThemedView style={styles.centered}>
-        <Stack.Screen options={{ title: 'Route options' }} />
+        <Stack.Screen options={{ title: t('screens.routeOptions') }} />
         {planState.status === 'loading' ? (
           <ActivityIndicator color={theme.accent} />
         ) : (
-          <ThemedText themeColor="textSecondary">This leg is no longer part of the trip.</ThemedText>
+          <ThemedText themeColor="textSecondary">{t('routeOptions.legGone')}</ThemedText>
         )}
       </ThemedView>
     );
   }
 
-  const useLabel = choice ? `Use ${choice.name.charAt(0).toLowerCase()}${choice.name.slice(1)}` : '';
+  const useLabel = choice ? t('routeOptions.use', { name: choice.name }) : '';
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: 'Route options' }} />
+      <Stack.Screen options={{ title: t('screens.routeOptions') }} />
       <ScrollView contentContainerStyle={styles.content}>
-        <ThemedText type="small" themeColor="textSecondary">
-          {from.name} to {to.name}
-        </ThemedText>
+        {plan && plan.stops.length > 2 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.legChips}>
+            {plan.stops.slice(1).map((stop, index) => {
+              const selectedLeg = index === legIndex;
+              return (
+                <Pressable
+                  key={index}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedLeg }}
+                  onPress={() => {
+                    setPicked(null);
+                    router.setParams({ leg: String(index) });
+                  }}
+                  style={({ pressed }) => [
+                    styles.legChip,
+                    selectedLeg
+                      ? { backgroundColor: theme.text, borderColor: theme.text }
+                      : { backgroundColor: theme.backgroundElement, borderColor: theme.borderSoft },
+                    pressed && styles.pressed,
+                  ]}>
+                  <ThemedText type="smallBold" style={{ color: selectedLeg ? theme.backgroundElement : theme.text }}>
+                    {t('routeOptions.fromTo', { from: plan.stops[index].name, to: stop.name })}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <ThemedText type="small" themeColor="textSecondary">
+            {t('routeOptions.fromTo', { from: from.name, to: to.name })}
+          </ThemedText>
+        )}
 
         <RouteMap lines={lines} stops={[from, to]} style={{ height: Math.max(220, height * 0.32) }} />
 
@@ -132,14 +156,14 @@ export default function RouteOptionsScreen() {
           <View style={styles.row}>
             <ActivityIndicator color={theme.accent} />
             <ThemedText type="small" themeColor="textSecondary">
-              Asking OpenRouteService for other routes…
+              {t('routeOptions.asking')}
             </ThemedText>
           </View>
         )}
 
         {options.status === 'error' && (
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Couldn’t load route options</ThemedText>
+            <ThemedText type="smallBold">{t('errors.routeOptions')}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary" accessibilityRole="alert">
               {options.message}
             </ThemedText>
@@ -148,7 +172,7 @@ export default function RouteOptionsScreen() {
 
         {options.status === 'ready' && list.length === 1 && notes.length === 0 && (
           <ThemedText type="small" themeColor="textSecondary">
-            OpenRouteService found only one sensible route for this leg.
+            {t('routeOptions.onlyOne')}
           </ThemedText>
         )}
         {notes.map((note) => (
@@ -175,7 +199,7 @@ export default function RouteOptionsScreen() {
             onPress={() => setRefreshKey((key) => key + 1)}
             style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
             <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              Look up routes again
+              {t('routeOptions.lookAgain')}
             </ThemedText>
           </Pressable>
         )}
@@ -185,7 +209,7 @@ export default function RouteOptionsScreen() {
             onPress={useDefault}
             style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
             <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              Go back to the default route
+              {t('routeOptions.useDefault')}
             </ThemedText>
           </Pressable>
         )}
@@ -201,7 +225,7 @@ export default function RouteOptionsScreen() {
             accessibilityRole="button"
             onPress={useChoice}
             style={({ pressed }) => [styles.useButton, { backgroundColor: theme.accent }, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: theme.background }}>
+            <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
               {useLabel}
             </ThemedText>
           </Pressable>
@@ -223,11 +247,12 @@ function OptionCard({
   onPress: () => void;
 }) {
   const theme = useTheme();
+  const t = useT();
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${option.name}, ${formatDistance(option.distance)}, ${formatDuration(option.duration)}${current ? ', your current choice' : ''}`}
+      accessibilityLabel={`${option.name}, ${formatDistance(option.distance)}, ${formatDuration(option.duration)}${current ? `, ${t('routeOptions.currentChoice')}` : ''}`}
       onPress={onPress}
       style={({ pressed }) => [
         styles.optionCard,
@@ -242,7 +267,7 @@ function OptionCard({
       </View>
       <SurfaceBar surface={option.surface} />
       <View style={styles.tags}>
-        {current && <Tag text="Your current choice" kind="good" />}
+        {current && <Tag text={t('routeOptions.currentChoice')} kind="good" />}
         {option.tags.map((tag) => (
           <Tag key={tag.text} {...tag} />
         ))}
@@ -252,7 +277,13 @@ function OptionCard({
 }
 
 function Tag({ text, kind }: RouteTag) {
-  const [background, color] = TAG_COLORS[kind];
+  const theme = useTheme();
+  const [background, color] =
+    kind === 'good'
+      ? [theme.goodBackground, theme.goodText]
+      : kind === 'warn'
+        ? [theme.warningBackground, theme.warningText]
+        : [theme.backgroundSelected, theme.text];
   return (
     <View style={[styles.tag, { backgroundColor: background }]}>
       <ThemedText type="small" style={[styles.tagText, { color }]}>
@@ -336,6 +367,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 48,
     borderRadius: 12,
+  },
+  legChips: {
+    gap: 6,
+  },
+  legChip: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: BorderWidth,
   },
   pressed: {
     opacity: 0.7,

@@ -1,4 +1,5 @@
 /** Pure helpers for route planning, kept free of React Native so they can be tested on their own. */
+import { t } from './i18n';
 
 /** `[longitude, latitude]`, the order OpenRouteService uses. */
 export type LonLat = [number, number];
@@ -265,16 +266,16 @@ export function routeTags(
 ): RouteTag[] {
   const tags: RouteTag[] = [];
   if (all.length > 1 && route.duration === Math.min(...all.map((r) => r.duration))) {
-    tags.push({ text: 'Fastest', kind: 'plain' });
+    tags.push({ text: t('routeOptions.fastest'), kind: 'plain' });
   }
   if (all.length > 1 && route.distance === Math.min(...all.map((r) => r.distance))) {
-    tags.push({ text: 'Shortest', kind: 'plain' });
+    tags.push({ text: t('routeOptions.shortest'), kind: 'plain' });
   }
   const km = (share: number) => Math.round((share * route.distance) / 1000);
-  if (km(route.surface.unpaved) > 0) tags.push({ text: `${km(route.surface.unpaved)} km unpaved`, kind: 'warn' });
-  if (km(route.surface.gravel) > 0) tags.push({ text: `${km(route.surface.gravel)} km gravel`, kind: 'plain' });
-  if (route.surface.tar > 0.995) tags.push({ text: 'All tar', kind: 'good' });
-  if (km(route.surface.unknown) >= 5) tags.push({ text: `${km(route.surface.unknown)} km surface unknown`, kind: 'plain' });
+  if (km(route.surface.unpaved) > 0) tags.push({ text: t('routeOptions.kmUnpaved', { km: km(route.surface.unpaved) }), kind: 'warn' });
+  if (km(route.surface.gravel) > 0) tags.push({ text: t('routeOptions.kmGravel', { km: km(route.surface.gravel) }), kind: 'plain' });
+  if (route.surface.tar > 0.995) tags.push({ text: t('routeOptions.allTar'), kind: 'good' });
+  if (km(route.surface.unknown) >= 5) tags.push({ text: t('routeOptions.kmUnknown', { km: km(route.surface.unknown) }), kind: 'plain' });
   return tags;
 }
 
@@ -318,8 +319,8 @@ export function formatDuration(seconds: number) {
   const totalMinutes = Math.round(seconds / 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes} min`;
-  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
+  if (hours === 0) return t('units.minutes', { minutes });
+  return minutes === 0 ? t('units.hours', { hours }) : t('units.hoursMinutes', { hours, minutes });
 }
 
 // -- Suggestions while typing a stop name -------------------------------------

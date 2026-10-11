@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { rankSuggestions, type LonLat, type PlaceCandidate } from '@/lib/route-math';
 import { orsFetch, RouteError } from '@/lib/route-plan';
+import { t } from '@/lib/i18n';
 
 /** Fewer letters than this match too much to be useful, and waste lookups. */
 const MIN_LETTERS = 3;
@@ -67,7 +68,7 @@ export function usePlaceSuggestions(query: string, near?: LonLat): PlaceSuggesti
         })
         .catch((error: unknown) => {
           const message =
-            error instanceof RouteError ? error.message : 'Couldn’t look up places right now.';
+            error instanceof RouteError ? error.message : t('errors.placeSearch');
           if (!cancelled) setResult({ request, value: { suggestions: [], loading: false, error: message } });
         });
     }, DEBOUNCE_MS);

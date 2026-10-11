@@ -40,7 +40,9 @@
           "cameraPermission": "Spoor uses the camera so you can photograph a place to share, like a roadside wood seller.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-localization",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,15 +1,22 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 
-import { PlaceholderScreen } from '@/components/placeholder-screen';
+import { MessageScreen } from '@/components/placeholder-screen';
 import { TripForm } from '@/components/trip-form';
+import { useT } from '@/lib/i18n';
 import { useTrip } from '@/lib/trips';
 
 export default function EditTripScreen() {
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const trip = useTrip(id);
 
   if (!trip) {
-    return <PlaceholderScreen title="Trip not found" />;
+    return (
+      <>
+        <Stack.Screen options={{ title: t('trip.notFoundTitle') }} />
+        <MessageScreen text={t('trip.notFound')} />
+      </>
+    );
   }
 
   // Keyed so the form's state resets if a different trip is opened in place.

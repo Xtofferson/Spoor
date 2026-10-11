@@ -24,27 +24,25 @@ import {
   type Terrain,
   type VehicleForm,
 } from '@/lib/fuel';
+import { useT } from '@/lib/i18n';
 import { saveVehicle, useVehicle } from '@/lib/vehicle';
 
-const TERRAINS: { key: Terrain; label: string }[] = [
-  { key: 'tar', label: 'Tar' },
-  { key: 'gravel', label: 'Gravel' },
-  { key: 'sand', label: 'Sand' },
-];
+const TERRAINS: Terrain[] = ['tar', 'gravel', 'sand'];
 
 function close() {
   if (router.canGoBack()) router.back();
   else router.replace('/');
 }
 
-export default function SettingsScreen() {
+export default function VehicleScreen() {
   const theme = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const saved = useVehicle();
   const [form, setForm] = useState<VehicleForm>(() => vehicleToForm(saved));
   // Field messages only show after the first save attempt, so an empty form isn't all red.
   const [triedSaving, setTriedSaving] = useState(false);
-  const result = readVehicleForm(form);
+  const result = readVehicleForm(form, t);
   const errors = triedSaving ? (result.errors ?? {}) : {};
 
   function set(key: keyof VehicleForm) {
@@ -66,23 +64,23 @@ export default function SettingsScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText type="small" themeColor="textSecondary">
-          Used to plan fuel on the Route tab. Saved with your account.
+          {t('vehicle.intro')}
         </ThemedText>
 
-        <Section title="Vehicle">
+        <Section title={t('screens.vehicle')}>
           <Field
-            label="Name"
+            label={t('vehicle.name')}
             value={form.name}
             onChangeText={set('name')}
-            placeholder="e.g. Land Cruiser 79"
+            placeholder={t('vehicle.namePlaceholder')}
             error={errors.name}
             keyboardType="default"
           />
         </Section>
 
-        <Section title="Fuel capacity">
+        <Section title={t('vehicle.capacity')}>
           <Field
-            label="Main tank"
+            label={t('vehicle.mainTank')}
             unit="L"
             value={form.mainTankLitres}
             onChangeText={set('mainTankLitres')}
@@ -90,20 +88,20 @@ export default function SettingsScreen() {
             error={errors.mainTankLitres}
           />
           <Field
-            label="Jerry cans, all together"
+            label={t('vehicle.jerryCans')}
             unit="L"
             value={form.jerryCanLitres}
             onChangeText={set('jerryCanLitres')}
-            placeholder="40, or leave blank for none"
+            placeholder={t('vehicle.jerryCansPlaceholder')}
             error={errors.jerryCanLitres}
           />
         </Section>
 
-        <Section title="Fuel consumption">
-          {TERRAINS.map(({ key, label }) => (
+        <Section title={t('vehicle.consumption')}>
+          {TERRAINS.map((key) => (
             <Field
               key={key}
-              label={label}
+              label={t(`fuel.terrain.${key}`)}
               unit="L/100 km"
               value={form[key]}
               onChangeText={set(key)}
@@ -113,9 +111,9 @@ export default function SettingsScreen() {
           ))}
         </Section>
 
-        <Section title="Water">
+        <Section title={t('supplies.water')}>
           <Field
-            label="Drinking water carried"
+            label={t('vehicle.water')}
             unit="L"
             value={form.waterLitres}
             onChangeText={set('waterLitres')}
@@ -126,21 +124,21 @@ export default function SettingsScreen() {
 
         {preview && (
           <ThemedView type="backgroundElement" style={styles.preview}>
-            <ThemedText type="smallBold">Safe range</ThemedText>
+            <ThemedText type="smallBold">{t('vehicle.safeRange')}</ThemedText>
             <View style={styles.previewRow}>
-              {TERRAINS.map(({ key, label }) => (
+              {TERRAINS.map((key) => (
                 <View key={key} style={styles.previewItem}>
                   <ThemedText style={[styles.mono, { color: theme.accent }]}>
                     {Math.round(safeRangeKm(preview, key)).toLocaleString('en-US')} km
                   </ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    {label}
+                    {t(`fuel.terrain.${key}`)}
                   </ThemedText>
                 </View>
               ))}
             </View>
             <ThemedText type="small" themeColor="textSecondary">
-              Tank and jerry cans, keeping {Math.round(RESERVE_SHARE * 100)}% in reserve.
+              {t('vehicle.safeRangeNote', { percent: Math.round(RESERVE_SHARE * 100) })}
             </ThemedText>
           </ThemedView>
         )}
@@ -156,7 +154,7 @@ export default function SettingsScreen() {
           onPress={close}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
           <ThemedText type="smallBold" style={{ color: theme.accent }}>
-            Cancel
+            {t('common.cancel')}
           </ThemedText>
         </Pressable>
         <Pressable
@@ -168,8 +166,8 @@ export default function SettingsScreen() {
             { backgroundColor: theme.accent },
             pressed && styles.pressed,
           ]}>
-          <ThemedText type="smallBold" style={{ color: theme.background }}>
-            Save vehicle
+          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
+            {t('vehicle.save')}
           </ThemedText>
         </Pressable>
       </View>
@@ -267,6 +265,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    fontFamily: Fonts.sans,
     paddingVertical: Spacing.two,
   },
   numberInput: {

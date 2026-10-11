@@ -19,7 +19,7 @@ import { DateField } from '@/components/date-field';
 import { canPickOnMap, LocationPicker } from '@/components/location-picker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { usePlaceSuggestions } from '@/lib/place-search';
 import type { LonLat, PlaceCandidate } from '@/lib/route-math';
@@ -34,13 +34,12 @@ import {
   type Stop,
   type Trip,
 } from '@/lib/trips';
+import { useT, type Translate } from '@/lib/i18n';
 
-const DELETE_RED = '#B42318';
-
-function stopLabel(index: number, count: number) {
-  if (index === 0) return 'Origin';
-  if (index === count - 1) return 'Destination';
-  return `Stop ${index}`;
+function stopLabel(index: number, count: number, t: Translate) {
+  if (index === 0) return t('tripForm.origin');
+  if (index === count - 1) return t('tripForm.destination');
+  return t('tripForm.stop', { number: index });
 }
 
 /** The form's starting stops: a blank origin and destination, or the trip's stops with dates filled in. */
@@ -64,20 +63,18 @@ function initialStops(trip: Trip | undefined): Stop[] {
 }
 
 /** Asks before deleting. Alert isn't available on web, so use the browser's confirm there. */
-function confirmDelete(name: string, onConfirm: () => void) {
-  const message = `“${name}” will be removed from this phone and your account.`;
+function confirmDelete(name: string, t: Translate, onConfirm: () => void) {
+  const title = t('tripForm.deleteTitle');
+  const message = t('tripForm.deleteMessage', { name });
   if (Platform.OS === 'web') {
-    if (window.confirm(`Delete this trip?\n\n${message}`)) onConfirm();
+    if (window.confirm(`${title}\n\n${message}`)) onConfirm();
     return;
   }
-  Alert.alert('Delete this trip?', message, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: onConfirm },
+  Alert.alert(title, message, [
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('common.delete'), style: 'destructive', onPress: onConfirm },
   ]);
 }
-
-/** Name used for a stop that was pinned on the map but couldn't be named, e.g. while offline. */
-const PINNED_NAME = 'Pinned location';
 
 /** A stop counts as filled in once it has a name or a pin. */
 function hasPlace(stop: Stop) {
@@ -101,7 +98,10 @@ function close() {
 
 export function TripForm({ trip }: { trip?: Trip }) {
   const theme = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
+  // Name used for a stop that was pinned on the map but couldn't be named, e.g. while offline.
+  const pinnedName = t('tripForm.pinnedName');
   const [name, setName] = useState(trip?.name ?? '');
   const [people, setPeople] = useState(trip?.people ?? 1);
 
@@ -183,27 +183,31 @@ export function TripForm({ trip }: { trip?: Trip }) {
   function save() {
     if (!canSave) return;
     const now = Date.now();
+    const id = trip?.id ?? createId();
     saveTrip({
-      id: trip?.id ?? createId(),
+      id,
       name: name.trim(),
       people,
       // The trip runs from leaving the origin to arriving at the destination.
       startDate,
       endDate,
       stops: stops
-        .map((stop) => ({ ...stop, name: stop.name.trim() || (stop.coordinates ? PINNED_NAME : '') }))
+        .map((stop) => ({ ...stop, name: stop.name.trim() || (stop.coordinates ? pinnedName : '') }))
         .filter((stop, index) => stop.name !== '' || index === 0 || index === stops.length - 1),
       createdAt: trip?.createdAt ?? now,
       updatedAt: now,
     });
-    close();
+    // A new trip opens straight away; an edited one goes back to where it was opened from.
+    if (trip) close();
+    else router.replace({ pathname: '/trips/[id]', params: { id } });
   }
 
   function remove() {
     if (!trip) return;
-    confirmDelete(trip.name, () => {
+    confirmDelete(trip.name, t, () => {
       deleteTrip(trip.id);
-      close();
+      // Back to the trip list, past the deleted trip's own screen.
+      router.dismissTo('/trips');
     });
   }
 
@@ -224,43 +228,43 @@ export function TripForm({ trip }: { trip?: Trip }) {
         keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            Trip name
+            {t('tripForm.name')}
           </ThemedText>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="e.g. Joburg to Kubu Island"
+            placeholder={t('tripForm.namePlaceholder')}
             placeholderTextColor={theme.textSecondary}
             style={inputStyle}
             autoFocus={!trip}
             returnKeyType="next"
-            accessibilityLabel="Trip name"
+            accessibilityLabel={t('tripForm.name')}
           />
         </View>
 
         <View style={styles.section}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            People on trip
+            {t('tripForm.people')}
           </ThemedText>
           <ThemedView type="backgroundElement" style={styles.peopleRow}>
-            <ThemedText>For planning water</ThemedText>
+            <ThemedText>{t('tripForm.peopleHint')}</ThemedText>
             <View
               style={styles.stepper}
               accessibilityRole="adjustable"
-              accessibilityLabel="People on trip"
+              accessibilityLabel={t('tripForm.people')}
               accessibilityValue={{ now: people, min: 1, max: MAX_PEOPLE }}
               accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
               onAccessibilityAction={(event) => changePeople(event.nativeEvent.actionName === 'increment' ? 1 : -1)}>
               <StepButton
                 label="−"
-                accessibilityLabel="One fewer person"
+                accessibilityLabel={t('tripForm.fewerPeople')}
                 disabled={people <= 1}
                 onPress={() => changePeople(-1)}
               />
               <ThemedText style={styles.peopleCount}>{people}</ThemedText>
               <StepButton
                 label="+"
-                accessibilityLabel="One more person"
+                accessibilityLabel={t('tripForm.morePeople')}
                 disabled={people >= MAX_PEOPLE}
                 onPress={() => changePeople(1)}
               />
@@ -270,10 +274,10 @@ export function TripForm({ trip }: { trip?: Trip }) {
 
         <View style={styles.section}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            Route · {days} {days === 1 ? 'day' : 'days'}
+            {t('tripForm.route', { days: t('trips.days', { count: days }) })}
           </ThemedText>
           {stops.map((stop, index) => {
-            const label = stopLabel(index, stops.length);
+            const label = stopLabel(index, stops.length, t);
             const isStart = index === 0;
             const isEnd = index === stops.length - 1;
             return (
@@ -289,14 +293,14 @@ export function TripForm({ trip }: { trip?: Trip }) {
                     onChangeText={(value) => renameStop(stop, value)}
                     onBlur={() => setSearchingId((current) => (current === stop.id ? null : current))}
                     autoCorrect={false}
-                    placeholder={stop.coordinates ? PINNED_NAME : label}
+                    placeholder={stop.coordinates ? pinnedName : label}
                     placeholderTextColor={theme.textSecondary}
                     style={[styles.stopInput, { color: theme.text }]}
                     accessibilityLabel={label}
                   />
                   <IconButton
                     icon={{ ios: 'chevron.up', android: 'keyboard_arrow_up', web: 'keyboard_arrow_up' }}
-                    label={`Move ${label} up`}
+                    label={t('tripForm.moveUp', { stop: label })}
                     disabled={isStart}
                     onPress={() => moveStop(index, -1)}
                   />
@@ -306,13 +310,13 @@ export function TripForm({ trip }: { trip?: Trip }) {
                       android: 'keyboard_arrow_down',
                       web: 'keyboard_arrow_down',
                     }}
-                    label={`Move ${label} down`}
+                    label={t('tripForm.moveDown', { stop: label })}
                     disabled={isEnd}
                     onPress={() => moveStop(index, 1)}
                   />
                   <IconButton
                     icon={{ ios: 'xmark', android: 'close', web: 'close' }}
-                    label={`Remove ${label}`}
+                    label={t('tripForm.remove', { stop: label })}
                     // A trip always keeps a start and an end.
                     hidden={stops.length <= 2}
                     onPress={() => removeStop(stop.id)}
@@ -332,21 +336,21 @@ export function TripForm({ trip }: { trip?: Trip }) {
                     {stop.coordinates ? (
                       <>
                         <ThemedText type="small" style={[styles.locationText, { color: theme.accent }]}>
-                          {stop.placeLabel ?? 'Pinned on the map'}
+                          {stop.placeLabel ?? t('routeOptions.pinned')}
                         </ThemedText>
                         {canPickOnMap && (
-                          <TextButton label="Move pin" onPress={() => setPickingId(stop.id)} />
+                          <TextButton label={t('tripForm.movePin')} onPress={() => setPickingId(stop.id)} />
                         )}
                         <TextButton
-                          label="Remove pin"
-                          accessibilityLabel={`Remove map pin from ${label}`}
+                          label={t('tripForm.removePin')}
+                          accessibilityLabel={t('tripForm.removePinFrom', { stop: label })}
                           onPress={() => updateStop(stop.id, { coordinates: undefined, placeLabel: undefined })}
                         />
                       </>
                     ) : (
                       <TextButton
-                        label="Pick on map"
-                        accessibilityLabel={`Pick ${label} on the map`}
+                        label={t('tripForm.pickOnMap')}
+                        accessibilityLabel={t('tripForm.pickStopOnMap', { stop: label })}
                         onPress={() => setPickingId(stop.id)}
                       />
                     )}
@@ -356,7 +360,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
                 <View style={styles.stopDates}>
                   {!isStart && (
                     <DateField
-                      label="Arrives"
+                      label={t('tripForm.arrives')}
                       value={stop.arriveDate!}
                       onChange={(value) => updateStop(stop.id, { arriveDate: value })}
                       minimumDate={previousStopDate(stops, index)}
@@ -364,7 +368,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
                   )}
                   {!isEnd && (
                     <DateField
-                      label="Leaves"
+                      label={t('tripForm.leaves')}
                       value={stop.departDate!}
                       onChange={(value) => updateStop(stop.id, { departDate: value })}
                       minimumDate={isStart ? undefined : stop.arriveDate}
@@ -383,7 +387,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
               pressed && styles.pressed,
             ]}>
             <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              + Add stop
+              {t('tripForm.addStop')}
             </ThemedText>
           </Pressable>
         </View>
@@ -397,11 +401,11 @@ export function TripForm({ trip }: { trip?: Trip }) {
         {trip && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Delete trip"
+            accessibilityLabel={t('tripForm.deleteTrip')}
             onPress={remove}
             style={({ pressed }) => [styles.button, styles.deleteButton, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: DELETE_RED }}>
-              Delete
+            <ThemedText type="smallBold" style={{ color: theme.danger }}>
+              {t('common.delete')}
             </ThemedText>
           </Pressable>
         )}
@@ -410,7 +414,7 @@ export function TripForm({ trip }: { trip?: Trip }) {
           onPress={close}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
           <ThemedText type="smallBold" style={{ color: theme.accent }}>
-            Cancel
+            {t('common.cancel')}
           </ThemedText>
         </Pressable>
         <Pressable
@@ -425,15 +429,15 @@ export function TripForm({ trip }: { trip?: Trip }) {
             !canSave && styles.disabled,
             pressed && styles.pressed,
           ]}>
-          <ThemedText type="smallBold" style={{ color: theme.background }}>
-            {trip ? 'Save changes' : 'Save trip'}
+          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
+            {trip ? t('tripForm.saveChanges') : t('tripForm.saveTrip')}
           </ThemedText>
         </Pressable>
       </View>
 
       <LocationPicker
         visible={pickingIndex !== -1}
-        title={pickingIndex === -1 ? '' : `Pick ${stopLabel(pickingIndex, stops.length).toLowerCase()}`}
+        title={pickingIndex === -1 ? '' : t('tripForm.pickTitle', { stop: stopLabel(pickingIndex, stops.length, t) })}
         initial={stops[pickingIndex]?.coordinates}
         near={pickingIndex === -1 ? undefined : nearestPinned(stops, pickingIndex)}
         onCancel={() => setPickingId(null)}
@@ -454,6 +458,7 @@ function StopSuggestions({
   onChoose: (place: PlaceCandidate) => void;
 }) {
   const theme = useTheme();
+  const t = useT();
   const { suggestions, loading, error } = usePlaceSuggestions(query, near);
   const typed = query.trim().length >= 3;
 
@@ -464,7 +469,7 @@ function StopSuggestions({
         <View style={styles.suggestionStatus}>
           <ActivityIndicator size="small" color={theme.accent} />
           <ThemedText type="small" themeColor="textSecondary">
-            Searching…
+            {t('tripForm.searching')}
           </ThemedText>
         </View>
       )}
@@ -475,7 +480,7 @@ function StopSuggestions({
       )}
       {!loading && !error && suggestions.length === 0 && (
         <ThemedText type="small" themeColor="textSecondary" style={styles.suggestionStatus}>
-          No matches. Try adding the country, e.g. “Nata, Botswana”, or use Pick on map.
+          {t('tripForm.noMatches')}
         </ThemedText>
       )}
       {suggestions.map((place) => (
@@ -499,7 +504,7 @@ function StopSuggestions({
       ))}
       {suggestions.length > 0 && (
         <ThemedText type="small" themeColor="textSecondary" style={styles.suggestionStatus}>
-          Not listed? Add the country, e.g. “Nata, Botswana”.
+          {t('tripForm.notListed')}
         </ThemedText>
       )}
     </View>
@@ -637,6 +642,7 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 16,
+    fontFamily: Fonts.sans,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two + Spacing.one,
@@ -695,6 +701,7 @@ const styles = StyleSheet.create({
   stopInput: {
     flex: 1,
     fontSize: 16,
+    fontFamily: Fonts.sans,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.two + Spacing.one,
   },

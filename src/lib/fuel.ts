@@ -3,6 +3,7 @@
  * between fuel stops are tight. Pure functions only, so they can be tested without a phone
  * or a network. Finding the stops themselves is in route-points.
  */
+import { t as currentT, type Translate } from './i18n';
 import type { SurfaceShares } from './route-math';
 import {
   stopsAlong,
@@ -90,23 +91,24 @@ function parseNumber(value: string) {
 
 /** Checks the settings form, returning the vehicle or what's wrong with each field. */
 export function readVehicleForm(
-  form: VehicleForm
+  form: VehicleForm,
+  t: Translate = currentT
 ): { vehicle: Omit<Vehicle, 'updatedAt'>; errors?: undefined } | { vehicle?: undefined; errors: VehicleErrors } {
   const errors: VehicleErrors = {};
   const name = form.name.trim();
-  if (!name) errors.name = 'Give the vehicle a name.';
+  if (!name) errors.name = t('vehicle.errors.name');
 
   const litres = (key: 'mainTankLitres' | 'jerryCanLitres', min: number, max: number) => {
     const value = parseNumber(form[key]);
     if (key === 'jerryCanLitres' && form[key].trim() === '') return 0;
     if (value === undefined || value < min || value > max) {
-      errors[key] = `Enter litres between ${min} and ${max}.`;
+      errors[key] = t('vehicle.errors.litres', { min, max });
     }
     return value ?? 0;
   };
   const rate = (key: Terrain) => {
     const value = parseNumber(form[key]);
-    if (value === undefined || value < 2 || value > 80) errors[key] = 'Enter litres per 100 km between 2 and 80.';
+    if (value === undefined || value < 2 || value > 80) errors[key] = t('vehicle.errors.rate');
     return value ?? 0;
   };
 
@@ -115,7 +117,7 @@ export function readVehicleForm(
   if (form.waterLitres.trim() !== '') {
     waterLitres = parseNumber(form.waterLitres);
     if (waterLitres === undefined || waterLitres < 0 || waterLitres > 2000) {
-      errors.waterLitres = 'Enter litres between 0 and 2000.';
+      errors.waterLitres = t('vehicle.errors.litres', { min: 0, max: 2000 });
     }
   }
 
@@ -163,8 +165,13 @@ export function chooseVehicle<T extends Vehicle & { dirty?: boolean }>(
 export type FuelStop = PlaceStop<FuelStation>;
 
 /** Fuel stations grouped into fuel stops along the route, in order, named after nearby towns. */
-export function fuelStopsAlong(line: RouteLine, stations: FuelStation[], settlements: Settlement[] = []): FuelStop[] {
-  return stopsAlong(line, stations, () => 'Fuel station', settlements);
+export function fuelStopsAlong(
+  line: RouteLine,
+  stations: FuelStation[],
+  settlements: Settlement[] = [],
+  t: Translate = currentT
+): FuelStop[] {
+  return stopsAlong(line, stations, () => t('fuel.station'), settlements);
 }
 
 export type FuelStretch = Stretch & {
@@ -203,18 +210,19 @@ export function fuelStretches(line: RouteLine, stops: FuelStop[], vehicle: Vehic
 }
 
 /** What to tell the driver about a stretch that's tight or too long, if anything. */
-export function stretchAdvice(stretch: FuelStretch, vehicle: Vehicle): string | undefined {
+export function stretchAdvice(stretch: FuelStretch, vehicle: Vehicle, t: Translate = currentT): string | undefined {
   const percent = Math.round(stretch.shareOfRange * 100);
   if (stretch.status === 'over') {
-    return (
-      `Needs about ${Math.round(stretch.litres)} L, more than your safe range ` +
-      `(${Math.round(usableLitres(vehicle))} L with the 20% reserve). Carry extra fuel or find fuel before ${stretch.to}.`
-    );
+    return t('fuel.adviceOver', {
+      litres: Math.round(stretch.litres),
+      usable: Math.round(usableLitres(vehicle)),
+      to: stretch.to,
+    });
   }
   if (stretch.status === 'tight') {
     return vehicle.jerryCanLitres > 0
-      ? `Uses ${percent}% of range — fill the jerry cans at ${stretch.from}.`
-      : `Uses ${percent}% of range — fill up at ${stretch.from}, and consider carrying extra fuel.`;
+      ? t('fuel.adviceTightCans', { percent, from: stretch.from })
+      : t('fuel.adviceTight', { percent, from: stretch.from });
   }
   return undefined;
 }

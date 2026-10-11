@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { dateLocale, useLanguage } from '@/lib/i18n';
 import { formatDate, fromDateString, toDateString } from '@/lib/trips';
 
 type DateFieldProps = {
@@ -21,6 +22,7 @@ type DateFieldProps = {
 };
 
 export function DateField({ label, value, onChange, minimumDate, maximumDate }: DateFieldProps) {
+  const locale = dateLocale(useLanguage());
   const theme = useTheme();
   const [dialogOpen, setDialogOpen] = useState(false);
   const minimum = minimumDate ? fromDateString(minimumDate) : undefined;
@@ -48,12 +50,12 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
     <>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${label}, ${formatDate(value)}`}
+        accessibilityLabel={`${label}, ${formatDate(value, locale)}`}
         onPress={() => setDialogOpen(true)}
         style={({ pressed }) => pressed && styles.pressed}>
         <ThemedView type="backgroundElement" style={[styles.field, styles.androidField]}>
           <ThemedText>{label}</ThemedText>
-          <ThemedText style={{ color: theme.accent }}>{formatDate(value)}</ThemedText>
+          <ThemedText style={{ color: theme.accent }}>{formatDate(value, locale)}</ThemedText>
         </ThemedView>
       </Pressable>
       {dialogOpen && (

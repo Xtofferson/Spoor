@@ -13,8 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 
 type Mode = 'sign-in' | 'sign-up';
@@ -24,6 +25,7 @@ const MIN_PASSWORD_LENGTH = 6;
 
 export default function SignInScreen() {
   const theme = useTheme();
+  const t = useT();
   const [mode, setMode] = useState<Mode>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,7 +49,7 @@ export default function SignInScreen() {
         setError(error.message);
       } else if (!data.session) {
         // Email confirmation is on: Supabase sent a link and there's no session yet.
-        setNotice('Check your email and tap the confirmation link, then sign in here.');
+        setNotice(t('signIn.checkEmail'));
         setMode('sign-in');
         setPassword('');
       }
@@ -79,7 +81,7 @@ export default function SignInScreen() {
                 Spoor
               </ThemedText>
               <ThemedText themeColor="textSecondary">
-                {isSignUp ? 'Create an account to sync your trips.' : 'Sign in to see your trips.'}
+                {isSignUp ? t('signIn.createIntro') : t('signIn.intro')}
               </ThemedText>
             </View>
 
@@ -87,7 +89,7 @@ export default function SignInScreen() {
               <TextInput
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Email"
+                placeholder={t('signIn.email')}
                 placeholderTextColor={theme.textSecondary}
                 style={inputStyle}
                 autoCapitalize="none"
@@ -96,12 +98,12 @@ export default function SignInScreen() {
                 keyboardType="email-address"
                 textContentType="emailAddress"
                 returnKeyType="next"
-                accessibilityLabel="Email"
+                accessibilityLabel={t('signIn.email')}
               />
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                placeholder={isSignUp ? `Password (at least ${MIN_PASSWORD_LENGTH} characters)` : 'Password'}
+                placeholder={isSignUp ? t('signIn.newPassword', { count: MIN_PASSWORD_LENGTH }) : t('signIn.password')}
                 placeholderTextColor={theme.textSecondary}
                 style={inputStyle}
                 secureTextEntry
@@ -110,12 +112,12 @@ export default function SignInScreen() {
                 textContentType={isSignUp ? 'newPassword' : 'password'}
                 returnKeyType="go"
                 onSubmitEditing={submit}
-                accessibilityLabel="Password"
+                accessibilityLabel={t('signIn.password')}
               />
             </View>
 
             {error && (
-              <ThemedText type="small" style={styles.error} accessibilityRole="alert">
+              <ThemedText type="small" style={{ color: theme.danger }} accessibilityRole="alert">
                 {error}
               </ThemedText>
             )}
@@ -139,8 +141,8 @@ export default function SignInScreen() {
               {busy ? (
                 <ActivityIndicator color={theme.background} />
               ) : (
-                <ThemedText type="smallBold" style={{ color: theme.background }}>
-                  {isSignUp ? 'Create account' : 'Sign in'}
+                <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
+                  {isSignUp ? t('signIn.createAccount') : t('signIn.signIn')}
                 </ThemedText>
               )}
             </Pressable>
@@ -150,9 +152,9 @@ export default function SignInScreen() {
               onPress={switchMode}
               style={({ pressed }) => [styles.switchButton, pressed && styles.pressed]}>
               <ThemedText type="small" themeColor="textSecondary">
-                {isSignUp ? 'Already have an account? ' : 'New to Spoor? '}
+                {isSignUp ? t('signIn.haveAccount') : t('signIn.newHere')}{' '}
                 <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                  {isSignUp ? 'Sign in' : 'Create an account'}
+                  {isSignUp ? t('signIn.signIn') : t('signIn.createAnAccount')}
                 </ThemedText>
               </ThemedText>
             </Pressable>
@@ -185,12 +187,10 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 16,
+    fontFamily: Fonts.sans,
     borderRadius: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two + Spacing.one,
-  },
-  error: {
-    color: '#B42318',
   },
   primaryButton: {
     alignItems: 'center',

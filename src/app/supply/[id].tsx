@@ -14,10 +14,14 @@ import {
   photoUrl,
   useSupplyCategories,
 } from '@/lib/supplies';
+import { categoryText } from '@/lib/supply-points';
 import { formatDate } from '@/lib/trips';
+import { dateLocale, useLanguage, useT } from '@/lib/i18n';
 
 export default function SupplyPointScreen() {
   const theme = useTheme();
+  const t = useT();
+  const locale = dateLocale(useLanguage());
   const { id } = useLocalSearchParams<{ id: string }>();
   const categories = useSupplyCategories();
   const [point] = useState(() => findSupplyPoint(id));
@@ -27,28 +31,29 @@ export default function SupplyPointScreen() {
     return (
       <ThemedView style={styles.flex}>
         <View style={styles.content}>
-          <ThemedText themeColor="textSecondary">This place isn’t on the route map any more.</ThemedText>
+          <ThemedText themeColor="textSecondary">{t('place.notFound')}</ThemedText>
         </View>
       </ThemedView>
     );
   }
 
   const category = categories.find((c) => c.id === point.category);
+  const text = category && categoryText(category, t);
   const photo = photoUrl(point);
   const mine = point.source === 'user' && point.createdBy === currentSuppliesUser();
 
   function confirmDelete() {
     if (!point) return;
-    Alert.alert('Delete this place?', `“${point.name}” will be removed for everyone.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('place.deleteTitle'), t('place.deleteMessage', { name: point.name }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           setDeleting(true);
           const error = await deleteSupplyPoint(point);
           setDeleting(false);
-          if (error) Alert.alert('Not deleted', error);
+          if (error) Alert.alert(t('place.notDeleted'), error);
           else router.back();
         },
       },
@@ -66,15 +71,15 @@ export default function SupplyPointScreen() {
         <View style={styles.flex}>
           <ThemedText type="subtitle">{point.name}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {category?.label ?? 'Place'}
+            {text?.label ?? t('screens.place')}
           </ThemedText>
         </View>
       </View>
 
-      {category?.routeWarning && (
+      {text?.routeWarning && (
         <View style={[styles.warning, { backgroundColor: theme.dangerBackground }]}>
           <ThemedText type="small" style={{ color: theme.dangerText }}>
-            {category.routeWarning}
+            {text.routeWarning}
           </ThemedText>
         </View>
       )}
@@ -85,13 +90,13 @@ export default function SupplyPointScreen() {
           style={styles.photo}
           contentFit="cover"
           cachePolicy="disk"
-          accessibilityLabel={`Photo of ${point.name}`}
+          accessibilityLabel={t('place.photoOf', { name: point.name })}
         />
       )}
 
       <ThemedView type="backgroundElement" style={styles.card}>
         {point.phone && (
-          <Row label="Phone">
+          <Row label={t('place.phone')}>
             <Pressable
               accessibilityRole="link"
               onPress={() => Linking.openURL(`tel:${point.phone!.replace(/[^\d+]/g, '')}`)}
@@ -101,25 +106,25 @@ export default function SupplyPointScreen() {
           </Row>
         )}
         {point.openingHours && (
-          <Row label="Opening hours">
+          <Row label={t('place.hours')}>
             <ThemedText>{point.openingHours}</ThemedText>
           </Row>
         )}
         {point.notes && (
-          <Row label="Notes">
+          <Row label={t('place.notes')}>
             <ThemedText>{point.notes}</ThemedText>
           </Row>
         )}
-        <Row label="Source">
+        <Row label={t('place.source')}>
           <ThemedText>
-            {point.source === 'OSM' ? 'OpenStreetMap' : mine ? 'Added by you' : 'Added by a traveller'}
-            {point.pending ? ' · not uploaded yet' : ''}
+            {point.source === 'OSM' ? 'OpenStreetMap' : mine ? t('place.addedByYou') : t('supplies.addedByTraveller')}
+            {point.pending ? ` · ${t('supplies.notUploaded')}` : ''}
           </ThemedText>
         </Row>
-        <Row label="Last confirmed">
-          <ThemedText>{point.lastConfirmed ? formatDate(point.lastConfirmed) : 'Not known'}</ThemedText>
+        <Row label={t('place.lastConfirmed')}>
+          <ThemedText>{point.lastConfirmed ? formatDate(point.lastConfirmed, locale) : t('place.notKnown')}</ThemedText>
         </Row>
-        <Row label="Location">
+        <Row label={t('place.location')}>
           <ThemedText style={styles.mono}>
             {point.coordinates[1].toFixed(5)}, {point.coordinates[0].toFixed(5)}
           </ThemedText>
@@ -133,7 +138,7 @@ export default function SupplyPointScreen() {
           onPress={confirmDelete}
           style={({ pressed }) => [styles.delete, { borderColor: theme.danger }, pressed && styles.pressed]}>
           <ThemedText type="smallBold" style={{ color: theme.danger }}>
-            {deleting ? 'Deleting…' : 'Delete this place'}
+            {deleting ? t('place.deleting') : t('place.delete')}
           </ThemedText>
         </Pressable>
       )}

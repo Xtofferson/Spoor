@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { t } from '@/lib/i18n';
 
 import {
   choiceFitsLeg,
@@ -61,7 +62,7 @@ export class RouteError extends Error {}
 
 export async function orsFetch(path: string, init?: RequestInit) {
   if (!ORS_KEY) {
-    throw new RouteError('Missing EXPO_PUBLIC_ORS_KEY. Add it to .env and restart Expo.');
+    throw new RouteError(t('errors.orsKeyMissing'));
   }
   let response: Response;
   try {
@@ -70,29 +71,22 @@ export async function orsFetch(path: string, init?: RequestInit) {
       headers: { Authorization: ORS_KEY, 'Content-Type': 'application/json', ...init?.headers },
     });
   } catch {
-    throw new RouteError('Couldn’t reach OpenRouteService. Check your connection and try again.');
+    throw new RouteError(t('errors.orsUnreachable'));
   }
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     const message: string = body?.error?.message ?? body?.error ?? `Request failed (${response.status})`;
     if (message === 'Quota exceeded' || response.status === 429) {
-      throw new RouteError(
-        'OpenRouteService’s free daily limit has been reached. It resets within 24 hours; ' +
-          'routes you’ve already viewed and pinned stops still work.'
-      );
+      throw new RouteError(t('errors.orsQuota'));
     }
     // Checked before the general distance limit below, whose message is similar.
     if (message.includes('alternative Routes algorithm') || message.includes('With avoid areas')) {
-      throw new RouteError(`OpenRouteService limit: ${message}`);
+      throw new RouteError(t('errors.orsLimit', { message }));
     }
     if (message.includes('route distance must not be greater than')) {
-      throw new RouteError(
-        'OpenRouteService can’t plan routes over 6,000 km. If your trip is shorter, a stop was ' +
-          'probably found in the wrong country: add the country to its name, e.g. “Nata, ' +
-          'Botswana”, or pin it on the map.'
-      );
+      throw new RouteError(t('errors.orsTooFar'));
     }
-    throw new RouteError(`OpenRouteService: ${message}`);
+    throw new RouteError(t('errors.ors', { message }));
   }
   return body;
 }
@@ -179,7 +173,7 @@ async function locateStop(stopId: string, name: string, previous?: LonLat): Prom
     const anywhere = await searchPlaces(name);
     place = pickPlace(name, anywhere) ?? anywhere[0];
   }
-  if (!place) throw new RouteError(`Couldn’t find “${name}”. Try a fuller name, e.g. a town or lodge.`);
+  if (!place) throw new RouteError(t('errors.placeNotFound', { name }));
 
   const stop = { name, label: place.label, coordinates: place.coordinates };
   storage.setItem(key, JSON.stringify(stop));
@@ -213,7 +207,7 @@ async function planRoute(inputs: RouteStopInput[]): Promise<RoutePlan> {
   for (const [index, { stopId, name, coordinates, label }] of inputs.entries()) {
     if (coordinates) {
       // Pinned on the map or chosen from suggestions: use the exact spot, no search needed.
-      stops.push({ stopId, name, label: label ?? 'Pinned on the map', coordinates });
+      stops.push({ stopId, name, label: label ?? t('routeOptions.pinned'), coordinates });
     } else {
       // One at a time: each search is centred on the stop before it, or for the first
       // stop, on the next pinned one, so "Nata" isn't matched in Panama.
@@ -226,7 +220,7 @@ async function planRoute(inputs: RouteStopInput[]): Promise<RoutePlan> {
 
   const body = await directionsRequest(stops.map((stop) => stop.coordinates));
   const feature = body.features?.[0];
-  if (!feature) throw new RouteError('OpenRouteService didn’t return a route.');
+  if (!feature) throw new RouteError(t('errors.noRoute'));
   const { properties, geometry } = feature;
   const { surface, waytype } = extrasOf(properties);
   const wayPoints: number[] = properties.way_points ?? [];
@@ -382,19 +376,14 @@ export async function fetchRouteOptions(from: LonLat, to: LonLat): Promise<Route
       optionalVariant(
         () => requestVariant(from, to, 'shortest', { preference: 'shortest' }),
         notes,
-        (message) => `Couldn’t get the shortest route: ${message}`
+        (message) => t('routeOptions.noShortest', { message })
       ),
     ]);
     routes = [...fastest, ...shortest];
 
     const crossing = fastest[0] && firstBorderCrossing(fastest[0].geometry, fastest[0].countries);
     if (crossing && apart > MAX_AVOID_AREAS_STRAIGHT_LINE_METERS) {
-      notes.push(
-        'This leg crosses a border, but OpenRouteService can only route around a border post ' +
-          'when the stops are within 150 km of each other in a straight line (these are ' +
-          `${Math.round(apart / 1000).toLocaleString('en-US')} km apart). To compare crossings, ` +
-          'add a stop on each side of the border.'
-      );
+      notes.push(t('routeOptions.borderTooFar', { km: Math.round(apart / 1000).toLocaleString('en-US') }));
     } else if (crossing) {
       routes.push(
         ...(await optionalVariant(
@@ -404,27 +393,27 @@ export async function fetchRouteOptions(from: LonLat, to: LonLat): Promise<Route
               options: { avoid_polygons: areaAround(crossing) },
             }),
           notes,
-          () => 'Couldn’t find a route through a different border crossing.'
+          () => t('routeOptions.noOtherBorder')
         ))
       );
     }
   }
-  if (routes.length === 0) throw new RouteError('OpenRouteService didn’t return a route for this leg.');
+  if (routes.length === 0) throw new RouteError(t('errors.noRouteForLeg'));
 
   const distinct = withoutNearlyIdentical(routes).slice(0, MAX_OPTIONS);
   if (distinct.length === 1 && routes.length > 1) {
-    notes.push('The other routes OpenRouteService found were practically the same road, so there’s only one option here.');
+    notes.push(t('routeOptions.sameRoad'));
   }
   const roadNames = distinctiveRoads(distinct.map((route) => route.roads));
   return {
     notes,
     options: distinct.map((route, index) => {
       const tags = routeTags(route, distinct);
-      if (route.variant === 'other-border') tags.unshift({ text: 'Different border crossing', kind: 'plain' });
+      if (route.variant === 'other-border') tags.unshift({ text: t('routeOptions.otherBorder'), kind: 'plain' });
       return {
         from,
         to,
-        name: roadNames[index] ? `Via ${roadNames[index]}` : `Route ${index + 1}`,
+        name: roadNames[index] ? t('routeOptions.via', { road: roadNames[index] }) : t('routeOptions.numbered', { number: index + 1 }),
         distance: route.distance,
         duration: route.duration,
         surface: route.surface,
@@ -473,7 +462,7 @@ export function useRouteOptions(from: LonLat | undefined, to: LonLat | undefined
       })
       .catch((error: unknown) => {
         if (!(error instanceof RouteError)) console.warn('Route options failed:', error);
-        const message = error instanceof RouteError ? error.message : 'Couldn’t load route options.';
+        const message = error instanceof RouteError ? error.message : t('errors.routeOptions');
         if (!cancelled) setResult({ request, value: { status: 'error', message } });
       });
     return () => {
@@ -536,7 +525,7 @@ export function useRoutePlan(trip: Trip | undefined, refreshKey = 0): RoutePlanS
       .catch((error: unknown) => {
         if (!(error instanceof RouteError)) console.warn('Route planning failed:', error);
         const message =
-          error instanceof RouteError ? error.message : 'Something went wrong planning this route.';
+          error instanceof RouteError ? error.message : t('errors.routePlan');
         if (!cancelled) setResult({ request, value: { status: 'error', message } });
       });
     return () => {

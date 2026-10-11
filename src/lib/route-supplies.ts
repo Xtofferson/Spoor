@@ -8,6 +8,7 @@ import {
   type RouteSupplies,
 } from '@/lib/route-points';
 import { storage } from '@/lib/storage';
+import { t } from '@/lib/i18n';
 
 /**
  * Public Overpass servers, tried in order. They're often busy, and refuse requests that
@@ -53,7 +54,7 @@ export async function fetchRouteSupplies(route: LonLat[], supplyFilters: OsmSupp
     }
   }
   throw new SuppliesError(
-    'Couldn’t get fuel and water points from OpenStreetMap: its servers are busy or you’re offline. Try again in a few minutes.'
+    t('errors.suppliesBusy')
   );
 }
 
@@ -150,7 +151,7 @@ export function useRouteSupplies(
       })
       .catch((error: unknown) => {
         const message =
-          error instanceof SuppliesError ? error.message : 'Couldn’t get fuel and water points from OpenStreetMap.';
+          error instanceof SuppliesError ? error.message : t('errors.supplies');
         if (!cancelled) setResult({ request, value: { status: 'error', message } });
       });
     return () => {

@@ -3,6 +3,7 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import type { LonLat } from '@/lib/route-math';
 import type { PlannedStop } from '@/lib/route-plan';
 
@@ -34,10 +35,11 @@ type RouteMapProps = {
 
 /** react-native-maps doesn't run on the web, so show the route details without a map there. */
 export function RouteMap({ style }: RouteMapProps) {
+  const t = useT();
   return (
     <ThemedView type="backgroundElement" style={[styles.placeholder, style]}>
       <ThemedText type="small" themeColor="textSecondary">
-        The map is only available in the phone app for now.
+        {t('map.webOnly')}
       </ThemedText>
     </ThemedView>
   );

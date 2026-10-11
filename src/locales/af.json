@@ -1,0 +1,429 @@
+{
+  "errors": {
+    "orsKeyMissing": "EXPO_PUBLIC_ORS_KEY ontbreek. Voeg dit by .env en herbegin Expo.",
+    "orsUnreachable": "Kon nie OpenRouteService bereik nie. Kyk na jou verbinding en probeer weer.",
+    "orsQuota": "OpenRouteService se gratis daaglikse limiet is bereik. Dit stel binne 24 uur terug; roetes wat jy reeds gesien het en vasgespelde stoppunte werk steeds.",
+    "orsLimit": "OpenRouteService-limiet: {{message}}",
+    "orsTooFar": "OpenRouteService kan nie roetes langer as 6 000 km beplan nie. As jou reis korter is, is ’n stoppunt waarskynlik in die verkeerde land gevind: voeg die land by die naam, bv. “Nata, Botswana”, of speld dit op die kaart vas.",
+    "ors": "OpenRouteService: {{message}}",
+    "placeNotFound": "Kon nie “{{name}}” vind nie. Probeer ’n voller naam, bv. ’n dorp of herberg.",
+    "noRoute": "OpenRouteService het nie ’n roete teruggestuur nie.",
+    "noRouteForLeg": "OpenRouteService het nie ’n roete vir hierdie skof teruggestuur nie.",
+    "routeOptions": "Kon nie roete-opsies laai nie.",
+    "routePlan": "Iets het skeefgeloop met die beplanning van hierdie roete.",
+    "placeSearch": "Kon nie nou na plekke soek nie.",
+    "suppliesBusy": "Kon nie brandstof, water en voorrade van OpenStreetMap kry nie: sy bedieners is besig of jy is vanlyn. Probeer oor ’n paar minute weer.",
+    "supplies": "Kon nie brandstof, water en voorrade van OpenStreetMap kry nie.",
+    "signInToDelete": "Meld aan om plekke uit te vee.",
+    "deleteFailed": "Kon dit nie uitvee nie. Kyk na jou verbinding en probeer weer."
+  },
+  "routeOptions": {
+    "pinned": "Op die kaart vasgespeld",
+    "noShortest": "Kon nie die kortste roete kry nie: {{message}}",
+    "borderTooFar": "Hierdie skof gaan oor ’n grens, maar OpenRouteService kan net om ’n grenspos roeteer as die stoppunte binne 150 km van mekaar in ’n reguit lyn is (hierdie is {{km}} km uitmekaar). Voeg ’n stoppunt aan elke kant van die grens by om oorgange te vergelyk.",
+    "noOtherBorder": "Kon nie ’n roete deur ’n ander grenspos vind nie.",
+    "sameRoad": "Die ander roetes wat OpenRouteService gevind het, was feitlik dieselfde pad, so daar is net een opsie hier.",
+    "otherBorder": "Ander grenspos",
+    "via": "Via {{road}}",
+    "numbered": "Roete {{number}}",
+    "fastest": "Vinnigste",
+    "shortest": "Kortste",
+    "kmUnpaved": "{{km}} km grondpad",
+    "kmGravel": "{{km}} km gruis",
+    "allTar": "Alles teer",
+    "kmUnknown": "{{km}} km onbekende oppervlak",
+    "legGone": "Hierdie skof is nie meer deel van die reis nie.",
+    "use": "Gebruik: {{name}}",
+    "fromTo": "{{from}} na {{to}}",
+    "asking": "Vra OpenRouteService vir ander roetes…",
+    "onlyOne": "OpenRouteService het net een sinvolle roete vir hierdie skof gevind.",
+    "lookAgain": "Soek weer na roetes",
+    "useDefault": "Gaan terug na die gewone roete",
+    "currentChoice": "Jou huidige keuse"
+  },
+  "units": {
+    "hours": "{{hours}} u",
+    "minutes": "{{minutes}} min",
+    "hoursMinutes": "{{hours}} u {{minutes}} min"
+  },
+  "vehicle": {
+    "errors": {
+      "name": "Gee die voertuig ’n naam.",
+      "litres": "Tik liter tussen {{min}} en {{max}} in.",
+      "rate": "Tik liter per 100 km tussen 2 en 80 in."
+    },
+    "intro": "Word gebruik om brandstof en water vir jou reise te beplan. Saam met jou rekening gestoor.",
+    "name": "Naam",
+    "namePlaceholder": "bv. Land Cruiser 79",
+    "capacity": "Brandstofinhoud",
+    "mainTank": "Hooftenk",
+    "jerryCans": "Kanne, alles saam",
+    "jerryCansPlaceholder": "40, of los leeg vir geen",
+    "consumption": "Brandstofverbruik",
+    "water": "Drinkwater wat jy dra",
+    "safeRange": "Veilige reikafstand",
+    "safeRangeNote": "Tenk en kanne, met {{percent}}% in reserwe.",
+    "save": "Stoor voertuig"
+  },
+  "fuel": {
+    "station": "Vulstasie",
+    "adviceOver": "Het omtrent {{litres}} L nodig, meer as jou veilige reikafstand ({{usable}} L met die 20% reserwe). Dra ekstra brandstof of kry brandstof voor {{to}}.",
+    "adviceTightCans": "Gebruik {{percent}}% van die reikafstand — maak die kanne vol by {{from}}.",
+    "adviceTight": "Gebruik {{percent}}% van die reikafstand — maak vol by {{from}}, en oorweeg om ekstra brandstof te dra.",
+    "plusCans": " + {{litres}} L in kanne",
+    "range": "Brandstofreikafstand",
+    "addVehicleText": "Voeg jou voertuig se tenkgrootte en brandstofverbruik by om jou reikafstand te sien, hoeveel brandstof hierdie reis nodig het, en watter stukke tussen vulstasies knap is.",
+    "safeRange": "km veilige reikafstand · {{percent}}% reserwe gehou",
+    "terrain": {
+      "label": "Soort pad",
+      "tar": "Teer",
+      "gravel": "Gruis",
+      "sand": "Sand"
+    },
+    "tripNeeds": "Hierdie reis het omtrent {{litres}} L brandstof nodig, volgens elke skof se mengsel van teer, gruis en grondpad.",
+    "between": "Tussen vulstasies",
+    "stretchDetail": "{{percent}}% van reikafstand · omtrent {{litres}} L",
+    "foundNoVehicle": {
+      "one": "{{count}} vulstasie langs die roete gevind. Voeg jou voertuig by om te sien hoeveel van jou reikafstand elke stuk gebruik.",
+      "other": "{{count}} vulstasies langs die roete gevind. Voeg jou voertuig by om te sien hoeveel van jou reikafstand elke stuk tussen hulle gebruik."
+    },
+    "whereToFill": "Waar om vol te maak",
+    "plannedBetween": {
+      "one": "Brandstof word beplan tussen die {{count}} dorp wat jy gemerk het.",
+      "other": "Brandstof word beplan tussen die {{count}} dorpe wat jy gemerk het."
+    },
+    "tickTowns": "Merk die dorpe waar jy gaan volmaak. Tot jy dit doen, word elke plek met brandstof getel.",
+    "atPlace": "By {{place}}",
+    "kmFrom": "{{km}} km van {{place}}",
+    "fillHere": "Maak hier vol"
+  },
+  "water": {
+    "kind": {
+      "drinking": "Drinkwater",
+      "point": "Waterpunt",
+      "tap": "Waterkraan",
+      "well": "Put"
+    },
+    "days": {
+      "one": "{{days}} dag",
+      "other": "{{days}} dae"
+    },
+    "people": {
+      "one": "{{count}} persoon",
+      "other": "{{count}} mense"
+    },
+    "advice": "Het omtrent {{litres}} L water nodig vir {{people}} oor {{days}}; jy dra {{carried}} L. {{fill}}",
+    "fillTreat": "Maak vol by {{from}} (suiwer dit eers) en dra meer.",
+    "fill": "Maak vol by {{from}} en dra meer.",
+    "drinking": "Drinkwater",
+    "mayNeedTreating": "Moet dalk gesuiwer word",
+    "notForDrinking": "Gemerk as nie vir drink nie",
+    "addText": "Voeg by hoeveel drinkwater jy dra om te sien vir watter stukke tussen waterpunte dit nie sal hou nie, teen {{litres}} L per persoon per dag.",
+    "addCarried": "Voeg water by wat jy dra",
+    "carried": "{{litres}} L gedra",
+    "daysOfWater": "dae se water teen {{litres}} L per persoon per dag",
+    "peopleHint": "Stel die aantal mense wanneer jy die reis wysig.",
+    "between": "Tussen waterpunte",
+    "noneFound": "OpenStreetMap het geen waterpunte binne 5 km van hierdie roete nie, so die hele reis is een stuk. Dorpe en vulstasies verkoop dikwels water: vra plaaslik.",
+    "stretchDetail": "Omtrent {{days}} · het {{litres}} L van {{carried}} L nodig"
+  },
+  "supplies": {
+    "gapAdvice": "Laaste {{noun}} voor {{km}} km sonder een: koop voorraad by {{from}}.",
+    "gapAdviceStart": "Geen {{noun}} vir die eerste {{km}} km nie: koop voorraad voor jy {{from}} verlaat.",
+    "gapTitle": "Laaste {{noun}} voor {{to}}",
+    "gapTitleStart": "Geen {{noun}} voor {{to}} nie",
+    "errors": {
+      "category": "Kies watter soort plek dit is.",
+      "name": "Gee dit ’n naam, bv. “Houtverkoper langs die pad”.",
+      "nameLong": "Hou die naam korter as 120 karakters.",
+      "phone": "Hou die telefoonnommer korter as 40 karakters.",
+      "hours": "Hou die oopmaaktye korter as 200 karakters.",
+      "notes": "Hou die notas korter as 1 000 karakters."
+    },
+    "categories": {
+      "butcher": {
+        "label": "Slaghuis",
+        "noun": "slaghuis"
+      },
+      "firewood": {
+        "label": "Brandhout",
+        "noun": "brandhout"
+      },
+      "vet_checkpoint": {
+        "label": "Veeartsenykundige kontrolepunt",
+        "noun": "veeartsenykundige kontrolepunt",
+        "routeWarning": "Vars vleis kan hier gekonfiskeer word. Koop vleis ná hierdie kontrolepunt."
+      }
+    },
+    "fuel": "Brandstof",
+    "water": "Water",
+    "fuelAt": "Brandstof · {{place}}",
+    "notUploaded": "Nog nie opgelaai nie",
+    "fromOsm": "Van OpenStreetMap",
+    "addedByTraveller": "Deur ’n reisiger bygevoeg",
+    "tapForDetails": "Tik vir besonderhede",
+    "longPressHint": "Druk en hou die kaart om ’n plek by te voeg, soos ’n houtverkoper langs die pad of ’n kontrolepunt.",
+    "alongTheWay": "Slaghuise, brandhout en kontrolepunte",
+    "nextAfter": "Volgende {{noun}} daarna: {{place}}, {{km}} km verder.",
+    "noneAfter": "Daar is geen {{noun}} daarna op hierdie roete nie.",
+    "onYourRoute": "{{label}} op jou roete",
+    "offlineSaved": "Vanlyn: wys plekke wat op {{date}} gestoor is.",
+    "offlineNone": "Vanlyn: plekke wat reisigers bygevoeg het, sal wys sodra jy aanlyn is.",
+    "pendingUpload": {
+      "one": "{{count}} plek wat jy bygevoeg het, sal oplaai wanneer jy aanlyn is.",
+      "other": "{{count}} plekke wat jy bygevoeg het, sal oplaai wanneer jy aanlyn is."
+    },
+    "finding": "Soek brandstof, water en voorrade naby die roete…",
+    "showingSaved": "Wys wat vroeër gestoor is.",
+    "source": "{{fuel}} en {{water}} van OpenStreetMap, nagegaan op {{date}}. Neem aan jy maak vol by elke beplande vulstasie en elke waterpunt. Hulle kan sluit of opdroog: vra plaaslik.",
+    "fuelStops": {
+      "one": "{{count}} vulstasie",
+      "other": "{{count}} vulstasies"
+    },
+    "waterPoints": {
+      "one": "{{count}} waterpunt",
+      "other": "{{count}} waterpunte"
+    },
+    "refresh": "Laai weer",
+    "refreshLabel": "Soek weer na brandstof, water en voorrade",
+    "stretchLabel": "{{from}} na {{to}}, {{km}} km.",
+    "onTheRoute": {
+      "one": "{{count}} op die roete",
+      "other": "{{count}} op die roete"
+    },
+    "gapNote": "{{title}}: {{from}}",
+    "waterNote": "Water: neem genoeg vir {{days}} sonder ’n waterpunt ({{people}} × {{perDay}} liter × {{days}} = {{litres}} liter)"
+  },
+  "common": {
+    "cancel": "Kanselleer",
+    "edit": "Wysig",
+    "save": "Stoor",
+    "delete": "Vee uit",
+    "comingSoon": "Kom binnekort"
+  },
+  "tabs": {
+    "trips": "Reise",
+    "community": "Gemeenskap",
+    "maps": "Kaarte",
+    "me": "Ek"
+  },
+  "tripTabs": {
+    "route": "Roete",
+    "supplies": "Voorrade",
+    "camps": "Kampe",
+    "prep": "Voorbereiding",
+    "friends": "Vriende"
+  },
+  "screens": {
+    "newTrip": "Nuwe reis",
+    "editTrip": "Wysig reis",
+    "routeOptions": "Roete-opsies",
+    "vehicle": "Voertuig",
+    "addPlace": "Voeg ’n plek by",
+    "place": "Plek"
+  },
+  "sync": {
+    "idle": "",
+    "syncing": "Sinkroniseer tans…",
+    "synced": "Alle reise gesinkroniseer",
+    "offline": "Vanlyn · veranderinge sal sinkroniseer wanneer jy weer aanlyn is",
+    "error": "Kon nie sinkroniseer nie · sal weer probeer"
+  },
+  "trips": {
+    "planNew": "+ Beplan ’n nuwe reis",
+    "empty": "Nog geen reise nie. Beplan een om dit hier te sien.",
+    "days": {
+      "one": "{{count}} dag",
+      "other": "{{count}} dae"
+    },
+    "stops": {
+      "one": "{{count}} stoppunt",
+      "other": "{{count}} stoppunte"
+    },
+    "openHint": "Maak die reis oop"
+  },
+  "trip": {
+    "notFoundTitle": "Reis nie gevind nie",
+    "notFound": "Hierdie reis is nie meer op jou foon nie. Dit is dalk uitgevee.",
+    "editLabel": "Wysig {{name}}",
+    "back": "Terug na reise",
+    "sections": "Reis-afdelings"
+  },
+  "route": {
+    "needsStops": "Gee hierdie reis ’n begin en ’n einde om die roete te sien. Tik op die potlood bo-aan.",
+    "finding": "Soek die stoppunte en die roete…",
+    "showingSaved": "Wys die laaste gestoorde roete.",
+    "totalDistance": "Totale afstand",
+    "drivingTime": "Rytyd",
+    "drivingTimeNote": "Rytyd is OpenRouteService se skatting, sonder stilstande. Gruis- en sandpaaie neem gewoonlik langer.",
+    "roadSurface": "Padoppervlak",
+    "legs": "Skofte",
+    "legsHint": "Tik op ’n skof om ander roetes daarvoor te vergelyk.",
+    "legLabel": "{{from}} na {{to}}, {{summary}}. Roete-opsies",
+    "yourChoice": "{{name}} · jou keuse",
+    "matchedPlaces": "Gevonde plekke",
+    "matchedPlacesHint": "As ’n stoppunt op die verkeerde plek beland het, wysig die reis en gee dit óf ’n voller naam, bv. “Nata, Botswana”, óf gebruik Kies op kaart om die presiese plek vas te speld.",
+    "refresh": "Laai roete weer",
+    "fuelWarning": "Brandstof: {{advice}}",
+    "compare": "Vergelyk roetes",
+    "drivingTimeTotal": "Rytyd: {{time}}."
+  },
+  "camps": {
+    "about": "Vind en stoor slaapplekke langs jou roete: kampeerplekke, herberge en boskampe.",
+    "book": "Bespreek"
+  },
+  "prep": {
+    "about": "Kontrolelyste om jou en die voertuig gereed te kry: permitte, onderdele, kos en toerusting."
+  },
+  "friends": {
+    "about": "Deel hierdie reis met die mense wat saam met jou reis, sodat almal dieselfde plan sien.",
+    "whatsapp": "Deel op WhatsApp"
+  },
+  "community": {
+    "about": "Wenke, padverslae en plekke wat deur ander oorlandreisigers gedeel is."
+  },
+  "maps": {
+    "title": "Vanlyn-kaarte",
+    "about": "Laai kaarte vir jou reis af sodat jy sonder sein jou pad kan vind."
+  },
+  "me": {
+    "profile": "Profiel",
+    "signedInAs": "Aangemeld as",
+    "vehicle": "Voertuig",
+    "editVehicle": "Wysig jou voertuig",
+    "noVehicle": "Voeg jou voertuig by",
+    "noVehicleHint": "Tenkgrootte en brandstofverbruik, om brandstof en water te beplan.",
+    "vehicleSummary": "{{tank}} L brandstof · {{water}} L water",
+    "language": "Taal",
+    "languagePhone": "Dieselfde as my foon",
+    "settings": "Instellings",
+    "sync": "Sinkroniseer reise",
+    "syncNow": "Sinkroniseer nou",
+    "version": "Spoor weergawe {{version}}",
+    "signOut": "Meld af",
+    "signOutConfirmTitle": "Meld af?",
+    "signOutConfirm": "Jou reise bly in jou rekening gestoor. Meld weer aan om hulle te sien.",
+    "name": "Jou naam",
+    "namePlaceholder": "Vir die groet op die Reise-oortjie",
+    "nameNotSaved": "Naam nie gestoor nie",
+    "nameNotSavedHint": "Kyk na jou verbinding en probeer weer."
+  },
+  "tripForm": {
+    "origin": "Vertrekpunt",
+    "destination": "Bestemming",
+    "stop": "Stoppunt {{number}}",
+    "deleteTitle": "Vee hierdie reis uit?",
+    "deleteMessage": "“{{name}}” sal van hierdie foon en jou rekening verwyder word.",
+    "deleteTrip": "Vee reis uit",
+    "pinnedName": "Vasgespelde plek",
+    "name": "Naam van die reis",
+    "namePlaceholder": "bv. Joburg na Kubu-eiland",
+    "people": "Mense op die reis",
+    "peopleHint": "Om water te beplan",
+    "fewerPeople": "Een persoon minder",
+    "morePeople": "Een persoon meer",
+    "route": "Roete · {{days}}",
+    "moveUp": "Skuif {{stop}} op",
+    "moveDown": "Skuif {{stop}} af",
+    "remove": "Verwyder {{stop}}",
+    "movePin": "Skuif speld",
+    "removePin": "Verwyder speld",
+    "removePinFrom": "Verwyder kaartspeld van {{stop}}",
+    "pickOnMap": "Kies op kaart",
+    "pickStopOnMap": "Kies {{stop}} op die kaart",
+    "pickTitle": "Kies: {{stop}}",
+    "arrives": "Kom aan",
+    "leaves": "Vertrek",
+    "addStop": "+ Voeg stoppunt by",
+    "saveChanges": "Stoor veranderinge",
+    "saveTrip": "Stoor reis",
+    "searching": "Soek tans…",
+    "noMatches": "Geen resultate nie. Probeer die land byvoeg, bv. “Nata, Botswana”, of gebruik Kies op kaart.",
+    "notListed": "Nie gelys nie? Voeg die land by, bv. “Nata, Botswana”."
+  },
+  "addPlace": {
+    "noCamera": "Geen toegang tot kamera nie",
+    "noPhotos": "Geen toegang tot foto’s nie",
+    "allowAccess": "Laat dit toe in Instellings om ’n foto van hierdie plek by te voeg.",
+    "photoFailed": "Kon nie daardie foto gebruik nie",
+    "photoFailedHint": "Probeer ’n ander een.",
+    "intro": "By {{position}}. Gedeel met almal wat Spoor gebruik; dit word op jou foon gestoor en opgelaai wanneer jy aanlyn is.",
+    "noPosition": "Druk en hou die kaart op ’n reis se Voorrade-oortjie waar die plek is om dit by te voeg.",
+    "whatIsIt": "Wat is dit?",
+    "details": "Besonderhede",
+    "namePlaceholder": "bv. Houtverkoper langs die pad",
+    "optional": "Opsioneel",
+    "hoursPlaceholder": "Opsioneel, bv. Ma–Sa 7–17",
+    "notesPlaceholder": "Opsioneel, bv. Verkoop mopanie per bondel, R50",
+    "photo": "Foto",
+    "photoLabel": "Foto van die plek",
+    "removePhoto": "Verwyder foto",
+    "takePhoto": "Neem foto",
+    "choosePhoto": "Kies foto",
+    "preparing": "Berei foto voor…",
+    "add": "Voeg plek by"
+  },
+  "place": {
+    "notFound": "Hierdie plek is nie meer op die kaart nie.",
+    "deleteTitle": "Vee hierdie plek uit?",
+    "deleteMessage": "“{{name}}” sal vir almal verwyder word.",
+    "notDeleted": "Nie uitgevee nie",
+    "photoOf": "Foto van {{name}}",
+    "phone": "Telefoon",
+    "hours": "Oopmaaktye",
+    "notes": "Notas",
+    "source": "Bron",
+    "addedByYou": "Deur jou bygevoeg",
+    "lastConfirmed": "Laas bevestig",
+    "notKnown": "Onbekend",
+    "location": "Ligging",
+    "deleting": "Vee tans uit…",
+    "delete": "Vee hierdie plek uit"
+  },
+  "signIn": {
+    "checkEmail": "Kyk in jou e-pos en tik op die bevestigingskakel, en meld dan hier aan.",
+    "createIntro": "Skep ’n rekening om jou reise te sinkroniseer.",
+    "intro": "Meld aan om jou reise te sien.",
+    "email": "E-pos",
+    "password": "Wagwoord",
+    "newPassword": {
+      "one": "Wagwoord (ten minste {{count}} karakter)",
+      "other": "Wagwoord (ten minste {{count}} karakters)"
+    },
+    "createAccount": "Skep rekening",
+    "signIn": "Meld aan",
+    "haveAccount": "Het jy reeds ’n rekening?",
+    "newHere": "Nuut by Spoor?",
+    "createAnAccount": "Skep ’n rekening"
+  },
+  "surface": {
+    "tar": "Teer",
+    "gravel": "Gruis",
+    "unpaved": "Grondpad",
+    "unknown": "Onbekend"
+  },
+  "picker": {
+    "usePin": "Gebruik speld",
+    "moveHint": "Tik elders of sleep die speld om dit te skuif.",
+    "dropHint": "Tik op die kaart om ’n speld neer te sit. Knyp om in te zoem.",
+    "satellite": "Satelliet"
+  },
+  "map": {
+    "webOnly": "Die kaart is vir eers net in die foon-app beskikbaar."
+  },
+  "home": {
+    "morning": "Goeiemôre",
+    "afternoon": "Goeiemiddag",
+    "evening": "Goeienaand",
+    "greetingName": "{{greeting}}, {{name}}",
+    "next": "Volgende reis",
+    "open": "Maak reis oop",
+    "plan": "Beplan ’n nuwe reis",
+    "past": "Vorige reise",
+    "upcoming": "Komende reise",
+    "noFuelFor": "Geen vulstasie vir {{km}} km nie",
+    "waterShort": "Nie genoeg water vir {{days}} nie",
+    "onRoute": "{{label}} op die roete",
+    "noSupplyFor": "Geen {{noun}} vir {{km}} km nie"
+  }
+}

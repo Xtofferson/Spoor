@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/lib/i18n';
 import type { LonLat } from '@/lib/route-math';
 
 /** Southern Africa, for when there's nothing on the trip to centre the map on yet. */
@@ -46,6 +47,7 @@ export function LocationPicker({ visible, ...props }: LocationPickerProps) {
 
 function PickerContent({ title, initial, near, onCancel, onPick }: Omit<LocationPickerProps, 'visible'>) {
   const theme = useTheme();
+  const t = useT();
   const [pin, setPin] = useState<LonLat | undefined>(initial);
   const [satellite, setSatellite] = useState(false);
   const initialRegion = initial
@@ -64,7 +66,7 @@ function PickerContent({ title, initial, near, onCancel, onPick }: Omit<Location
             hitSlop={Spacing.two}
             style={({ pressed }) => pressed && styles.pressed}>
             <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              Cancel
+              {t('common.cancel')}
             </ThemedText>
           </Pressable>
           <ThemedText type="smallBold">{title}</ThemedText>
@@ -76,7 +78,7 @@ function PickerContent({ title, initial, near, onCancel, onPick }: Omit<Location
             hitSlop={Spacing.two}
             style={({ pressed }) => [!pin && styles.disabled, pressed && styles.pressed]}>
             <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              Use pin
+              {t('picker.usePin')}
             </ThemedText>
           </Pressable>
         </View>
@@ -107,8 +109,8 @@ function PickerContent({ title, initial, near, onCancel, onPick }: Omit<Location
             <ThemedView type="backgroundElement" style={styles.hint}>
               <ThemedText type="small">
                 {pin
-                  ? 'Tap elsewhere or drag the pin to move it.'
-                  : 'Tap the map to drop a pin. Pinch to zoom in.'}
+                  ? t('picker.moveHint')
+                  : t('picker.dropHint')}
               </ThemedText>
             </ThemedView>
             <Pressable
@@ -121,7 +123,7 @@ function PickerContent({ title, initial, near, onCancel, onPick }: Omit<Location
                 pressed && styles.pressed,
               ]}>
               <ThemedText type="smallBold" style={{ color: satellite ? theme.background : theme.text }}>
-                Satellite
+                {t('picker.satellite')}
               </ThemedText>
             </Pressable>
           </View>
