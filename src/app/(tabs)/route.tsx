@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,21 +11,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { RouteMap } from '@/components/route-map';
+import { RouteMap, type MapLine } from '@/components/route-map';
+import { SurfaceBar, SurfaceLegend } from '@/components/surface-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { formatDistance, formatDuration, type SurfaceShares } from '@/lib/route-math';
-import { useRoutePlan, type RoutePlan } from '@/lib/route-plan';
+import { formatDistance, formatDuration } from '@/lib/route-math';
+import { applyChosenRoutes, useRoutePlan, type ShownRoute } from '@/lib/route-plan';
 import { useTrips, type Trip } from '@/lib/trips';
-
-const SURFACES: { key: keyof SurfaceShares; label: string; color: string }[] = [
-  { key: 'tar', label: 'Tar', color: '#3F4744' },
-  { key: 'gravel', label: 'Gravel', color: '#B7791F' },
-  { key: 'unpaved', label: 'Unpaved', color: '#8A5A2B' },
-  { key: 'unknown', label: 'Unknown', color: '#C9CEC9' },
-];
 
 export default function RouteScreen() {
   const theme = useTheme();
@@ -35,6 +31,17 @@ export default function RouteScreen() {
   const trip = trips.find((t) => t.id === selectedId) ?? trips[0];
   const state = useRoutePlan(trip, refreshKey);
   const plan = state.status === 'idle' ? undefined : state.plan;
+  const route = useMemo(() => (plan ? applyChosenRoutes(plan, trip) : undefined), [plan, trip]);
+  const lines: MapLine[] = useMemo(
+    () =>
+      route?.legs.map((leg, index) => ({
+        key: `leg-${index}`,
+        coordinates: leg.geometry,
+        color: theme.accent,
+        width: 4,
+      })) ?? [],
+    [route, theme.accent]
+  );
 
   function selectTrip(id: string) {
     setSelectedId(id);
@@ -57,7 +64,11 @@ export default function RouteScreen() {
                 <TripPicker trips={trips} selectedId={trip.id} onSelect={selectTrip} />
               )}
 
-              <RouteMap plan={plan} style={{ height: Math.max(260, height * 0.4) }} />
+              <RouteMap
+                lines={lines}
+                stops={route?.stops}
+                style={{ height: Math.max(260, height * 0.4) }}
+              />
 
               {state.status === 'idle' && (
                 <ThemedText themeColor="textSecondary">
@@ -79,7 +90,7 @@ export default function RouteScreen() {
                 </ThemedText>
               )}
 
-              {plan && <RouteDetails plan={plan} />}
+              {route && <RouteDetails route={route} tripId={trip.id} />}
 
               {state.status !== 'idle' && state.status !== 'loading' && (
                 <Pressable
@@ -137,13 +148,14 @@ function TripPicker({
   );
 }
 
-function RouteDetails({ plan }: { plan: RoutePlan }) {
+function RouteDetails({ route, tripId }: { route: ShownRoute; tripId: string }) {
+  const theme = useTheme();
   return (
     <View style={styles.details}>
       <ThemedView type="backgroundElement" style={styles.card}>
         <View style={styles.totals}>
-          <Total value={formatDistance(plan.distance)} label="Total distance" />
-          <Total value={formatDuration(plan.duration)} label="Driving time" />
+          <Total value={formatDistance(route.distance)} label="Total distance" />
+          <Total value={formatDuration(route.duration)} label="Driving time" />
         </View>
         <ThemedText type="small" themeColor="textSecondary">
           Driving time is OpenRouteService’s estimate, without stops. Gravel and sand roads
@@ -153,33 +165,47 @@ function RouteDetails({ plan }: { plan: RoutePlan }) {
 
       <ThemedView type="backgroundElement" style={styles.card}>
         <ThemedText type="smallBold">Road surface</ThemedText>
-        <SurfaceBar surface={plan.surface} />
-        <View style={styles.legend}>
-          {SURFACES.filter(({ key }) => key !== 'unknown' || plan.surface.unknown > 0).map(
-            ({ key, label, color }) => (
-              <View key={key} style={styles.legendItem}>
-                <View style={[styles.swatch, { backgroundColor: color }]} />
-                <ThemedText type="small">
-                  {label} {Math.round(plan.surface[key] * 100)}% ·{' '}
-                  {formatDistance(plan.surface[key] * plan.distance)}
-                </ThemedText>
-              </View>
-            )
-          )}
-        </View>
+        <SurfaceBar surface={route.surface} height={12} />
+        <SurfaceLegend surface={route.surface} distance={route.distance} />
       </ThemedView>
 
       <ThemedView type="backgroundElement" style={styles.card}>
         <ThemedText type="smallBold">Legs</ThemedText>
-        {plan.legs.map((leg, index) => (
-          <View key={index} style={styles.leg}>
-            <ThemedText type="small" style={styles.legName}>
-              {leg.from} → {leg.to}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {formatDistance(leg.distance)} · {formatDuration(leg.duration)}
-            </ThemedText>
-          </View>
+        <ThemedText type="small" themeColor="textSecondary">
+          Tap a leg to compare other routes for it.
+        </ThemedText>
+        {route.legs.map((leg, index) => (
+          <Pressable
+            key={index}
+            accessibilityRole="button"
+            accessibilityLabel={`${leg.from} to ${leg.to}, ${formatDistance(leg.distance)}, ${formatDuration(leg.duration)}${leg.chosen ? `, ${leg.chosen} chosen` : ''}. Route options`}
+            onPress={() =>
+              router.push({ pathname: '/route-options', params: { tripId, leg: String(index) } })
+            }
+            style={({ pressed }) => [
+              styles.leg,
+              { borderTopColor: theme.backgroundSelected },
+              pressed && styles.pressed,
+            ]}>
+            <View style={styles.legText}>
+              <ThemedText type="small">
+                {leg.from} → {leg.to}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.mono}>
+                {formatDistance(leg.distance)} · {formatDuration(leg.duration)}
+              </ThemedText>
+              {leg.chosen && (
+                <ThemedText type="small" style={{ color: theme.accent }}>
+                  {leg.chosen} · your choice
+                </ThemedText>
+              )}
+            </View>
+            <SymbolView
+              name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+              size={14}
+              tintColor={theme.textSecondary}
+            />
+          </Pressable>
         ))}
       </ThemedView>
 
@@ -189,7 +215,7 @@ function RouteDetails({ plan }: { plan: RoutePlan }) {
           If a stop landed in the wrong place, edit the trip and either give it a fuller name,
           e.g. “Nata, Botswana”, or use Pick on map to pin the exact spot.
         </ThemedText>
-        {plan.stops.map((stop, index) => (
+        {route.stops.map((stop, index) => (
           <ThemedText key={index} type="small">
             {stop.name}: <ThemedText type="small" themeColor="textSecondary">{stop.label}</ThemedText>
           </ThemedText>
@@ -209,17 +235,6 @@ function Total({ value, label }: { value: string; label: string }) {
       <ThemedText type="small" themeColor="textSecondary">
         {label}
       </ThemedText>
-    </View>
-  );
-}
-
-function SurfaceBar({ surface }: { surface: SurfaceShares }) {
-  const summary = SURFACES.map(({ key, label }) => `${label} ${Math.round(surface[key] * 100)}%`).join(', ');
-  return (
-    <View style={styles.bar} accessible accessibilityLabel={`Road surface: ${summary}`}>
-      {SURFACES.map(({ key, color }) =>
-        surface[key] > 0 ? <View key={key} style={{ flex: surface[key], backgroundColor: color }} /> : null
-      )}
     </View>
   );
 }
@@ -269,32 +284,20 @@ const styles = StyleSheet.create({
   total: {
     flex: 1,
   },
-  bar: {
-    flexDirection: 'row',
-    height: 12,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  legend: {
-    gap: Spacing.one,
-  },
-  legendItem: {
+  leg: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+    minHeight: 44,
+    paddingVertical: Spacing.two,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  swatch: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-  },
-  leg: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  legName: {
+  legText: {
     flex: 1,
+    gap: Spacing.half,
+  },
+  mono: {
+    fontFamily: Fonts.mono,
   },
   refresh: {
     alignSelf: 'center',

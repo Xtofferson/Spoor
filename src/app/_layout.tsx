@@ -51,6 +51,7 @@ function RootStack() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="trip/new" options={{ presentation: 'modal', title: 'New trip' }} />
           <Stack.Screen name="trip/[id]" options={{ presentation: 'modal', title: 'Edit trip' }} />
+          <Stack.Screen name="route-options" options={{ title: 'Route options', headerBackTitle: 'Route' }} />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="sign-in" options={{ headerShown: false }} />

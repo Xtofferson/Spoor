@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import type { LonLat } from '@/lib/route-math';
+import type { ChosenRoute, LonLat } from '@/lib/route-math';
 import { storage } from '@/lib/storage';
 
 export type Stop = {
@@ -19,6 +19,8 @@ export type Stop = {
   coordinates?: LonLat;
   /** The suggestion the location came from, e.g. "Nata, CT, Botswana". Unset for map pins. */
   placeLabel?: string;
+  /** The route chosen for the leg arriving here, from the Route tab's route options. */
+  route?: ChosenRoute;
 };
 
 export type Trip = {

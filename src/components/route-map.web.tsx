@@ -3,10 +3,21 @@ import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import type { RoutePlan } from '@/lib/route-plan';
+import type { LonLat } from '@/lib/route-math';
+import type { PlannedStop } from '@/lib/route-plan';
+
+export type MapLine = {
+  key: string;
+  coordinates: LonLat[];
+  color: string;
+  width: number;
+  dashed?: boolean;
+  onPress?: () => void;
+};
 
 type RouteMapProps = {
-  plan?: RoutePlan;
+  lines: MapLine[];
+  stops?: PlannedStop[];
   style?: StyleProp<ViewStyle>;
 };
 

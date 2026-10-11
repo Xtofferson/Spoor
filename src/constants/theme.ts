@@ -15,6 +15,11 @@ export const Colors = {
     backgroundSelected: '#E4E7E1',
     textSecondary: '#5E6661',
     accent: '#0F5C55',
+    // Road surfaces, as in the prototype's route options.
+    surfaceTar: '#1C211E',
+    surfaceGravel: '#8A918C',
+    surfaceUnpaved: '#D08A12',
+    surfaceUnknown: '#D9DCD6',
   },
   dark: {
     text: '#ffffff',
@@ -23,6 +28,11 @@ export const Colors = {
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
     accent: '#4FB3A9',
+    // Tar is light here so it still shows against dark cards.
+    surfaceTar: '#E4E7E1',
+    surfaceGravel: '#8A918C',
+    surfaceUnpaved: '#D08A12',
+    surfaceUnknown: '#3A3F3C',
   },
 } as const;
 
