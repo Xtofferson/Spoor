@@ -18,6 +18,8 @@ import {
   type Vehicle,
 } from '@/lib/fuel';
 import type { SavedSupplies, SuppliesState } from '@/lib/route-supplies';
+import type { SupplyPointsState } from '@/lib/supplies';
+import { gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan } from '@/lib/supply-points';
 import {
   formatDays,
   stopNeedsTreating,
@@ -351,6 +353,100 @@ export function WaterStretchList({
   );
 }
 
+// -- Butcheries, firewood and checkpoints ----------------------------------------------
+
+/**
+ * Warnings for the supply categories: checkpoints the route passes (e.g. "Fresh meat may be
+ * confiscated here"), then long stretches without a butchery, firewood and so on.
+ */
+export function SupplyWarnings({
+  plan,
+  categories,
+  points,
+}: {
+  plan?: SupplyPlan;
+  categories: SupplyCategory[];
+  points: SupplyPointsState;
+}) {
+  const theme = useTheme();
+  if (!plan) return null;
+  const counts = categories
+    .map((category) => `${category.emoji} ${category.label} ${plan.stopsByCategory[category.id]?.length ?? 0}`)
+    .join(' · ');
+
+  return (
+    <View style={styles.list}>
+      <ThemedText type="smallBold">Supplies along the way</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {counts}. Press and hold the map to add a place, e.g. a roadside wood seller or a checkpoint.
+      </ThemedText>
+
+      {plan.crossings.map((crossing) => {
+        const affected = categories.find((c) => c.id === crossing.category.affectsCategory);
+        const next = affected
+          ? crossing.nextAfter
+            ? ` Next ${affected.noun} after it: ${crossing.nextAfter.label}, ${km(crossing.nextAfter.km)} km on.`
+            : ` There’s no ${affected.noun} after it on this route.`
+          : '';
+        return (
+          <ThemedView
+            key={crossing.point.id}
+            type="backgroundElement"
+            style={styles.stretch}
+            accessible
+            accessibilityLabel={`${crossing.category.label}, ${crossing.point.name}, km ${km(crossing.km)}. ${crossing.category.routeWarning}${next}`}>
+            <View style={styles.titleRow}>
+              <ThemedText style={styles.stretchName}>
+                {crossing.category.emoji} {crossing.point.name}
+              </ThemedText>
+              <ThemedText style={styles.mono}>km {km(crossing.km)}</ThemedText>
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              {crossing.category.label} on your route
+            </ThemedText>
+            <View style={[styles.advice, { backgroundColor: theme.dangerBackground }]}>
+              <ThemedText type="small" style={{ color: theme.dangerText }}>
+                {crossing.category.routeWarning}
+                {next}
+              </ThemedText>
+            </View>
+          </ThemedView>
+        );
+      })}
+
+      {plan.gaps.map((gap) => (
+        <StretchCard
+          key={`${gap.category.id}-${gap.startKm}`}
+          title={gapTitle(gap)}
+          from={gap.from}
+          to={gap.to}
+          startKm={gap.startKm}
+          endKm={gap.endKm}
+          distanceKm={gap.distanceKm}
+          share={1}
+          tone="warning"
+          detail=""
+          advice={gapAdvice(gap)}
+        />
+      ))}
+
+      {points.status === 'offline' && (
+        <ThemedText type="small" themeColor="textSecondary">
+          {points.fetchedAt
+            ? `Offline: showing places saved on ${new Date(points.fetchedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}.`
+            : 'Offline: places added by travellers will show once you’re online.'}
+        </ThemedText>
+      )}
+      {points.pending.length > 0 && (
+        <ThemedText type="small" themeColor="textSecondary">
+          {points.pending.length} {points.pending.length === 1 ? 'place' : 'places'} you added will upload when you’re
+          online.
+        </ThemedText>
+      )}
+    </View>
+  );
+}
+
 // -- Shared ---------------------------------------------------------------------
 
 /** Loading and errors for the fuel and water lookup, and where the data came from. */
@@ -411,6 +507,7 @@ export function SuppliesStatus({
 
 /** One stretch between stops, as in the prototype: km, a bar of how much it uses, and any warning. */
 function StretchCard({
+  title,
   from,
   to,
   startKm,
@@ -421,6 +518,8 @@ function StretchCard({
   detail,
   advice,
 }: {
+  /** A heading above the stops, e.g. "Last butchery before Nata". */
+  title?: string;
   from: string;
   to: string;
   /** Where the stretch starts and ends, in km from the trip's start. */
@@ -444,7 +543,8 @@ function StretchCard({
       type="backgroundElement"
       style={styles.stretch}
       accessible
-      accessibilityLabel={`${from} to ${to}, ${Math.round(distanceKm)} km. ${advice ?? detail}`}>
+      accessibilityLabel={`${title ? `${title}. ` : ''}${from} to ${to}, ${Math.round(distanceKm)} km. ${advice ?? detail}`}>
+      {title && <ThemedText type="smallBold">{title}</ThemedText>}
       <View style={styles.titleRow}>
         <ThemedText style={styles.stretchName}>
           {from} → {to}

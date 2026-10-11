@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { simplifyLine, type LonLat } from '@/lib/route-math';
-import { overpassSuppliesQuery, parseOverpassSupplies, type RouteSupplies } from '@/lib/route-points';
+import {
+  overpassSuppliesQuery,
+  parseOverpassSupplies,
+  type OsmSupplyFilter,
+  type RouteSupplies,
+} from '@/lib/route-points';
 import { storage } from '@/lib/storage';
 
 /**
@@ -17,9 +22,12 @@ const TIMEOUT_MS = 90_000;
 
 export class SuppliesError extends Error {}
 
-/** Fuel stations and water points within 5 km of a route, from OpenStreetMap. */
-export async function fetchRouteSupplies(route: LonLat[]): Promise<RouteSupplies> {
-  const body = `data=${encodeURIComponent(overpassSuppliesQuery(route))}`;
+/**
+ * Fuel stations and water points within 5 km of a route, the towns near it, and places in
+ * the supply categories (butcheries, firewood…) within 10 km, from OpenStreetMap.
+ */
+export async function fetchRouteSupplies(route: LonLat[], supplyFilters: OsmSupplyFilter[] = []): Promise<RouteSupplies> {
+  const body = `data=${encodeURIComponent(overpassSuppliesQuery(route, supplyFilters))}`;
   for (const server of OVERPASS_SERVERS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -37,7 +45,7 @@ export async function fetchRouteSupplies(route: LonLat[]): Promise<RouteSupplies
       // A busy server answers with an HTML error page instead of JSON; try the next one.
       if (!response.ok) continue;
       const json = await response.json().catch(() => undefined);
-      if (json?.elements) return parseOverpassSupplies(json);
+      if (json?.elements) return parseOverpassSupplies(json, supplyFilters);
     } catch {
       // Offline, timed out or refused: try the next server.
     } finally {
@@ -53,15 +61,31 @@ export async function fetchRouteSupplies(route: LonLat[]): Promise<RouteSupplies
 
 export type SavedSupplies = RouteSupplies & { fetchedAt: number };
 
-/** A short, stable id for a route's shape, so saved stations are reused for the same route. */
-function routeKey(route: LonLat[]): string {
-  const text = simplifyLine(route, 300)
+/** A short, stable id for a route's shape, e.g. for saving what was found along it. */
+export function routeShapeId(route: LonLat[]): string {
+  return hashText(routeShapeText(route));
+}
+
+function routeShapeText(route: LonLat[]): string {
+  return simplifyLine(route, 300)
     .map(([lon, lat]) => `${lon.toFixed(3)},${lat.toFixed(3)}`)
     .join(';');
+}
+
+function hashText(text: string): string {
   let hash = 5381;
   for (let i = 0; i < text.length; i++) hash = ((hash * 33) ^ text.charCodeAt(i)) >>> 0;
-  // v3: fuel, water and the towns near the route.
-  return `spoor.supplies.v3.${hash.toString(36)}.${text.length}`;
+  return `${hash.toString(36)}.${text.length}`;
+}
+
+/**
+ * Where a route's results are saved: by its shape and what's searched for along it, so
+ * they're reused for the same route, and looked up again when a supply category is added.
+ */
+function routeKey(route: LonLat[], supplyFilters: OsmSupplyFilter[]): string {
+  const searched = supplyFilters.map((filter) => `${filter.category}:${filter.tags.join('+')}`).join('|');
+  // v4: fuel, water, the towns near the route and supply categories.
+  return `spoor.supplies.v4.${hashText(`${routeShapeText(route)}#${searched}`)}`;
 }
 
 function readSaved(key: string): SavedSupplies | undefined {
@@ -75,6 +99,7 @@ function readSaved(key: string): SavedSupplies | undefined {
 }
 
 const IDLE = { status: 'idle' } as const;
+const NO_FILTERS: OsmSupplyFilter[] = [];
 
 export type SuppliesState =
   | { status: 'idle' }
@@ -83,11 +108,20 @@ export type SuppliesState =
   | { status: 'error'; message: string; saved?: SavedSupplies };
 
 /**
- * Fuel stations and water points along a route. Ones saved for the same route show straight
- * away, even offline; increase `refreshKey` to look them up again.
+ * Fuel stations, water points and supplies along a route. Ones saved for the same route show
+ * straight away, even offline; increase `refreshKey` to look them up again. `onFetched` is
+ * told about each fresh result, e.g. to share it.
  */
-export function useRouteSupplies(route: LonLat[] | undefined, refreshKey = 0): SuppliesState {
-  const key = useMemo(() => (route && route.length > 1 ? routeKey(route) : ''), [route]);
+export function useRouteSupplies(
+  route: LonLat[] | undefined,
+  refreshKey = 0,
+  supplyFilters: OsmSupplyFilter[] = NO_FILTERS,
+  onFetched?: (supplies: RouteSupplies) => void
+): SuppliesState {
+  const key = useMemo(
+    () => (route && route.length > 1 ? routeKey(route, supplyFilters) : ''),
+    [route, supplyFilters]
+  );
   const saved = useMemo(() => (key ? readSaved(key) : undefined), [key]);
   const useSaved = saved !== undefined && refreshKey === 0;
   const request = `${key}#${refreshKey}`;
@@ -95,18 +129,23 @@ export function useRouteSupplies(route: LonLat[] | undefined, refreshKey = 0): S
   // The latest route, read when fetching. The fetch itself depends only on `key`, so a new
   // array with the same shape doesn't look stations up again.
   const routeRef = useRef(route);
+  const filtersRef = useRef(supplyFilters);
+  const onFetchedRef = useRef(onFetched);
   useEffect(() => {
     routeRef.current = route;
+    filtersRef.current = supplyFilters;
+    onFetchedRef.current = onFetched;
   });
 
   useEffect(() => {
     const line = routeRef.current;
     if (!key || useSaved || !line) return;
     let cancelled = false;
-    fetchRouteSupplies(line)
+    fetchRouteSupplies(line, filtersRef.current)
       .then((supplies) => {
         const value: SavedSupplies = { ...supplies, fetchedAt: Date.now() };
         storage.setItem(key, JSON.stringify(value));
+        onFetchedRef.current?.(supplies);
         if (!cancelled) setResult({ request, value: { status: 'ready', ...value } });
       })
       .catch((error: unknown) => {

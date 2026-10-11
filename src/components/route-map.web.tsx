@@ -20,14 +20,15 @@ export type MapPoint = {
   coordinate: LonLat;
   title: string;
   description?: string;
-  /** A bundled image, from require(). */
-  icon: number;
+  icon: number | { emoji: string; color: string };
+  onCalloutPress?: () => void;
 };
 
 type RouteMapProps = {
   lines: MapLine[];
   stops?: PlannedStop[];
   points?: MapPoint[];
+  onLongPress?: (coordinate: LonLat) => void;
   style?: StyleProp<ViewStyle>;
 };
 

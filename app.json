@@ -32,7 +32,15 @@
           "imageWidth": 280
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Spoor uses your photos so you can add a picture of a place, like a roadside wood seller.",
+          "cameraPermission": "Spoor uses the camera so you can photograph a place to share, like a roadside wood seller.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

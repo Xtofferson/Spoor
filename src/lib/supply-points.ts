@@ -1,0 +1,425 @@
+/**
+ * Supplies along a route: butcheries, firewood, veterinary checkpoints and any other kinds
+ * added to Supabase's supply_categories table later. Pure functions only, so they can be
+ * tested without a phone or a network.
+ */
+import type { LonLat } from './route-math';
+import {
+  locateOnRoute,
+  stopsAlong,
+  stretchesBetween,
+  SUPPLY_SEARCH_RADIUS_METERS,
+  type OsmSupplyFilter,
+  type OsmSupplyPlace,
+  type PlaceStop,
+  type RouteLine,
+  type Settlement,
+  type Stretch,
+} from './route-points';
+
+// -- Categories ---------------------------------------------------------------------
+
+export type SupplyCategory = {
+  id: string;
+  /** "Butcher" */
+  label: string;
+  /** "butchery", for warnings: "Last butchery before…" */
+  noun: string;
+  /** The map marker: a symbol on a coloured circle. */
+  emoji: string;
+  color: string;
+  /** OpenStreetMap tags to look for along routes, e.g. ["shop=butcher"]. */
+  osmTags: string[];
+  /** Warn before a stretch longer than this without one. */
+  gapKm?: number;
+  /** Shown when a route passes one, e.g. at veterinary checkpoints. */
+  routeWarning?: string;
+  /** The category that warning is about, e.g. "butcher". */
+  affectsCategory?: string;
+  userCanAdd: boolean;
+  sort: number;
+};
+
+/**
+ * The categories as first set up in Supabase, used until the app has read the table (e.g.
+ * on a first launch offline). New categories come from the table, not from here.
+ */
+export const DEFAULT_CATEGORIES: SupplyCategory[] = [
+  {
+    id: 'butcher',
+    label: 'Butcher',
+    noun: 'butchery',
+    emoji: '🥩',
+    color: '#B5473A',
+    osmTags: ['shop=butcher'],
+    gapKm: 150,
+    userCanAdd: true,
+    sort: 10,
+  },
+  {
+    id: 'firewood',
+    label: 'Firewood',
+    noun: 'firewood',
+    emoji: '🪵',
+    color: '#8A5A2B',
+    osmTags: ['shop=firewood'],
+    gapKm: 150,
+    userCanAdd: true,
+    sort: 20,
+  },
+  {
+    id: 'vet_checkpoint',
+    label: 'Veterinary checkpoint',
+    noun: 'veterinary checkpoint',
+    emoji: '🐄',
+    color: '#6B2410',
+    osmTags: [],
+    routeWarning: 'Fresh meat may be confiscated here. Buy meat after this checkpoint.',
+    affectsCategory: 'butcher',
+    userCanAdd: true,
+    sort: 30,
+  },
+];
+
+export type CategoryRow = {
+  id: string;
+  label: string;
+  noun: string;
+  emoji: string;
+  color: string;
+  osm_tags: string[] | null;
+  gap_km: number | null;
+  route_warning: string | null;
+  affects_category: string | null;
+  user_can_add: boolean;
+  sort: number;
+};
+
+export function categoryFromRow(row: CategoryRow): SupplyCategory {
+  return {
+    id: row.id,
+    label: row.label,
+    noun: row.noun,
+    emoji: row.emoji,
+    color: row.color,
+    osmTags: row.osm_tags ?? [],
+    gapKm: row.gap_km ?? undefined,
+    routeWarning: row.route_warning ?? undefined,
+    affectsCategory: row.affects_category ?? undefined,
+    userCanAdd: row.user_can_add,
+    sort: row.sort,
+  };
+}
+
+/** What to look for on OpenStreetMap for the categories that have tags. */
+export function osmFilters(categories: SupplyCategory[]): OsmSupplyFilter[] {
+  return categories
+    .filter((category) => category.osmTags.length > 0)
+    .map((category) => ({ category: category.id, tags: category.osmTags }));
+}
+
+// -- Points -------------------------------------------------------------------------
+
+export type SupplyPoint = {
+  id: string;
+  category: string;
+  name: string;
+  coordinates: LonLat;
+  phone?: string;
+  openingHours?: string;
+  notes?: string;
+  /** The photo in Supabase storage, once uploaded. */
+  photoPath?: string;
+  /** The photo on this phone, while it's waiting to be uploaded. */
+  localPhotoUri?: string;
+  source: 'OSM' | 'user';
+  /** OpenStreetMap's id, e.g. "node/123", for places from there. */
+  osmId?: string;
+  /** Day someone last confirmed it's there, as `YYYY-MM-DD`. */
+  lastConfirmed?: string;
+  createdBy?: string;
+  /** Added on this phone and not uploaded yet. */
+  pending?: boolean;
+};
+
+export type PointRow = {
+  id: string;
+  category: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  phone: string | null;
+  opening_hours: string | null;
+  notes: string | null;
+  photo_path: string | null;
+  source: 'OSM' | 'user';
+  osm_id: string | null;
+  last_confirmed: string | null;
+  created_by: string | null;
+};
+
+export function pointFromRow(row: PointRow): SupplyPoint {
+  return {
+    id: row.id,
+    category: row.category,
+    name: row.name,
+    coordinates: [row.longitude, row.latitude],
+    phone: row.phone ?? undefined,
+    openingHours: row.opening_hours ?? undefined,
+    notes: row.notes ?? undefined,
+    photoPath: row.photo_path ?? undefined,
+    source: row.source,
+    osmId: row.osm_id ?? undefined,
+    lastConfirmed: row.last_confirmed ?? undefined,
+    createdBy: row.created_by ?? undefined,
+  };
+}
+
+/** A point added on the phone, as a row to upload. */
+export function rowFromPoint(point: SupplyPoint, userId: string): PointRow {
+  return {
+    id: point.id,
+    category: point.category,
+    name: point.name,
+    latitude: point.coordinates[1],
+    longitude: point.coordinates[0],
+    phone: point.phone ?? null,
+    opening_hours: point.openingHours ?? null,
+    notes: point.notes ?? null,
+    photo_path: point.photoPath ?? null,
+    source: 'user',
+    osm_id: null,
+    last_confirmed: point.lastConfirmed ?? null,
+    created_by: userId,
+  };
+}
+
+/** A place found on OpenStreetMap, as a supply point (before it has a row in Supabase). */
+export function pointFromOsm(place: OsmSupplyPlace, categories: SupplyCategory[]): SupplyPoint {
+  const label = categories.find((category) => category.id === place.category)?.label ?? 'Supplies';
+  return {
+    id: `osm:${place.id}`,
+    category: place.category,
+    name: place.name ?? place.brand ?? label,
+    coordinates: place.coordinates,
+    phone: place.phone,
+    openingHours: place.openingHours,
+    source: 'OSM',
+    osmId: place.id,
+    lastConfirmed: place.checkDate,
+  };
+}
+
+/** OpenStreetMap places as the seed_osm_supply_points function takes them. */
+export function osmSeedRows(points: SupplyPoint[]) {
+  return points
+    .filter((point) => point.source === 'OSM' && point.osmId)
+    .map((point) => ({
+      category: point.category,
+      name: point.name,
+      latitude: point.coordinates[1],
+      longitude: point.coordinates[0],
+      phone: point.phone ?? '',
+      opening_hours: point.openingHours ?? '',
+      osm_id: point.osmId,
+      last_confirmed: point.lastConfirmed ?? '',
+    }));
+}
+
+/**
+ * All the points to show, each once: ones saved in Supabase, ones just found on
+ * OpenStreetMap that aren't there yet, and ones added on this phone waiting to upload.
+ */
+export function mergePoints(shared: SupplyPoint[], fromOsm: SupplyPoint[], pending: SupplyPoint[]): SupplyPoint[] {
+  const known = new Set(shared.map((point) => point.osmId).filter(Boolean));
+  const ids = new Set(shared.map((point) => point.id));
+  return [
+    ...shared,
+    ...fromOsm.filter((point) => !known.has(point.osmId)),
+    ...pending.filter((point) => !ids.has(point.id)),
+  ];
+}
+
+/** The box around a route, widened by `marginKm`, for asking Supabase for points near it. */
+export function routeBounds(points: LonLat[], marginKm: number) {
+  let minLon = Infinity;
+  let minLat = Infinity;
+  let maxLon = -Infinity;
+  let maxLat = -Infinity;
+  for (const [lon, lat] of points) {
+    minLon = Math.min(minLon, lon);
+    maxLon = Math.max(maxLon, lon);
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+  }
+  const latMargin = marginKm / 110.5;
+  // Degrees of longitude shrink away from the equator; use the widest the box reaches.
+  const widestLat = Math.max(Math.abs(minLat), Math.abs(maxLat));
+  const lonMargin = marginKm / (111.3 * Math.max(0.1, Math.cos((widestLat * Math.PI) / 180)));
+  return {
+    minLat: minLat - latMargin,
+    maxLat: maxLat + latMargin,
+    minLon: minLon - lonMargin,
+    maxLon: maxLon + lonMargin,
+  };
+}
+
+/** Points within 10 km of the route. */
+export function pointsNearRoute(line: RouteLine, points: SupplyPoint[]): SupplyPoint[] {
+  const radiusKm = SUPPLY_SEARCH_RADIUS_METERS / 1000;
+  return points.filter((point) => locateOnRoute(line, point.coordinates).offRouteKm <= radiusKm + 0.5);
+}
+
+// -- Warnings -----------------------------------------------------------------------
+
+/** A supply point as stopsAlong groups it. */
+type SupplyPlace = { id: string; coordinates: LonLat; name?: string; point: SupplyPoint };
+export type SupplyStop = PlaceStop<SupplyPlace>;
+
+/** A category's points grouped into stops along the route, named after nearby towns. */
+export function supplyStopsAlong(
+  line: RouteLine,
+  points: SupplyPoint[],
+  category: SupplyCategory,
+  settlements: Settlement[] = []
+): SupplyStop[] {
+  const places = points
+    .filter((point) => point.category === category.id)
+    .map((point) => ({ id: point.id, coordinates: point.coordinates, name: point.name, point }));
+  return stopsAlong(line, places, () => category.label, settlements, SUPPLY_SEARCH_RADIUS_METERS / 1000);
+}
+
+export type SupplyGap = Stretch & {
+  category: SupplyCategory;
+  /** True when there's one at the stretch's start; false when the stretch starts the trip without one. */
+  hasStart: boolean;
+};
+
+/** Stretches longer than the category's gap (e.g. 150 km) without one of its places. */
+export function supplyGaps(line: RouteLine, stops: SupplyStop[], category: SupplyCategory): SupplyGap[] {
+  if (!category.gapKm) return [];
+  const gapKm = category.gapKm;
+  const startsWithOne = stops.length > 0 && stops[0].startKm < 2;
+  return stretchesBetween(line, stops)
+    .filter((stretch) => stretch.distanceKm > gapKm)
+    .map((stretch) => ({
+      ...stretch,
+      category,
+      hasStart: stretch.startKm > 0 || startsWithOne,
+    }));
+}
+
+/** "Last butchery before Nata → Kubu Island: 320 km without one." */
+export function gapAdvice(gap: SupplyGap): string {
+  const km = Math.round(gap.distanceKm).toLocaleString('en-US');
+  const noun = gap.category.noun;
+  return gap.hasStart
+    ? `Last ${noun} before ${km} km without one: stock up at ${gap.from}.`
+    : `No ${noun} for the first ${km} km: stock up before you leave ${gap.from}.`;
+}
+
+/** The card title: "Last butchery before Kubu Island", or "No butchery before Nata". */
+export function gapTitle(gap: SupplyGap): string {
+  return gap.hasStart ? `Last ${gap.category.noun} before ${gap.to}` : `No ${gap.category.noun} before ${gap.to}`;
+}
+
+/** A point this close to the route counts as on it, e.g. a checkpoint the road goes through. */
+export const ON_ROUTE_KM = 1;
+
+export type RouteCrossing = {
+  point: SupplyPoint;
+  category: SupplyCategory;
+  km: number;
+  /** The first place of the affected category after it, e.g. the next butchery. */
+  nextAfter?: { label: string; km: number };
+};
+
+/**
+ * Points with a route warning (e.g. veterinary checkpoints) that the route passes through,
+ * in order, with the next place of the category they affect.
+ */
+export function routeCrossings(
+  line: RouteLine,
+  points: SupplyPoint[],
+  categories: SupplyCategory[],
+  stopsByCategory: Record<string, SupplyStop[]>
+): RouteCrossing[] {
+  const crossings: RouteCrossing[] = [];
+  for (const point of points) {
+    const category = categories.find((c) => c.id === point.category);
+    if (!category?.routeWarning) continue;
+    const { alongKm, offRouteKm } = locateOnRoute(line, point.coordinates);
+    if (offRouteKm > ON_ROUTE_KM) continue;
+    const next = category.affectsCategory
+      ? stopsByCategory[category.affectsCategory]?.find((stop) => stop.startKm > alongKm)
+      : undefined;
+    crossings.push({
+      point,
+      category,
+      km: alongKm,
+      nextAfter: next && { label: next.label, km: next.startKm - alongKm },
+    });
+  }
+  return crossings.sort((a, b) => a.km - b.km);
+}
+
+// -- Adding a point -------------------------------------------------------------------
+
+export type SupplyForm = {
+  category: string;
+  name: string;
+  phone: string;
+  openingHours: string;
+  notes: string;
+};
+
+/** Checks the add screen's form, returning what's wrong with it, if anything. */
+export function supplyFormErrors(form: SupplyForm, categories: SupplyCategory[]): Partial<Record<keyof SupplyForm, string>> {
+  const errors: Partial<Record<keyof SupplyForm, string>> = {};
+  if (!categories.some((category) => category.id === form.category && category.userCanAdd)) {
+    errors.category = 'Choose what kind of place it is.';
+  }
+  const name = form.name.trim();
+  if (!name) errors.name = 'Give it a name, e.g. “Roadside wood seller”.';
+  else if (name.length > 120) errors.name = 'Keep the name under 120 characters.';
+  if (form.phone.trim().length > 40) errors.phone = 'Keep the phone number under 40 characters.';
+  if (form.openingHours.trim().length > 200) errors.openingHours = 'Keep the opening hours under 200 characters.';
+  if (form.notes.trim().length > 1000) errors.notes = 'Keep the notes under 1,000 characters.';
+  return errors;
+}
+
+/** A random id in Supabase's uuid format, so points can be created offline. */
+export function newPointId(random: () => number = Math.random): string {
+  const hex = Array.from({ length: 32 }, () => Math.floor(random() * 16).toString(16));
+  hex[12] = '4';
+  hex[16] = ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  const h = hex.join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+// -- Everything for one route ---------------------------------------------------------------
+
+export type SupplyPlan = {
+  stopsByCategory: Record<string, SupplyStop[]>;
+  /** Long stretches without a category's places, in route order. */
+  gaps: SupplyGap[];
+  /** Checkpoints and the like the route passes, in route order. */
+  crossings: RouteCrossing[];
+};
+
+/** The supply stops, gaps and crossings along a route, for every category. */
+export function planSupplies(
+  line: RouteLine,
+  points: SupplyPoint[],
+  categories: SupplyCategory[],
+  settlements: Settlement[] = []
+): SupplyPlan {
+  const stopsByCategory: Record<string, SupplyStop[]> = {};
+  for (const category of categories) {
+    stopsByCategory[category.id] = supplyStopsAlong(line, points, category, settlements);
+  }
+  const gaps = categories
+    .flatMap((category) => supplyGaps(line, stopsByCategory[category.id], category))
+    .sort((a, b) => a.startKm - b.startKm || a.category.sort - b.category.sort);
+  return { stopsByCategory, gaps, crossings: routeCrossings(line, points, categories, stopsByCategory) };
+}

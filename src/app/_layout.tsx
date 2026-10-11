@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { useSupplySync } from '@/lib/supplies';
 import { useTripSync } from '@/lib/trip-sync';
 import { useVehicleSync } from '@/lib/vehicle';
 
@@ -54,6 +55,8 @@ function RootStack() {
           <Stack.Screen name="trip/[id]" options={{ presentation: 'modal', title: 'Edit trip' }} />
           <Stack.Screen name="route-options" options={{ title: 'Route options', headerBackTitle: 'Route' }} />
           <Stack.Screen name="settings" options={{ title: 'Vehicle', presentation: 'modal' }} />
+          <Stack.Screen name="supply/new" options={{ title: 'Add a place', presentation: 'modal' }} />
+          <Stack.Screen name="supply/[id]" options={{ title: 'Place', presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="sign-in" options={{ headerShown: false }} />
@@ -66,5 +69,6 @@ function RootStack() {
 function TripSync({ userId }: { userId: string }) {
   useTripSync(userId);
   useVehicleSync(userId);
+  useSupplySync(userId);
   return null;
 }

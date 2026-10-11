@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import MapView, { Marker, Polyline, type LatLng } from 'react-native-maps';
 
 import { Spacing } from '@/constants/theme';
@@ -22,8 +22,10 @@ export type MapPoint = {
   coordinate: LonLat;
   title: string;
   description?: string;
-  /** A bundled image, from require(). */
-  icon: number;
+  /** A bundled image, from require(), or a symbol on a coloured circle (for supply categories). */
+  icon: number | { emoji: string; color: string };
+  /** Tapping the name bubble, e.g. to open the place's details. */
+  onCalloutPress?: () => void;
 };
 
 function toLatLng([longitude, latitude]: LonLat): LatLng {
@@ -49,10 +51,12 @@ type RouteMapProps = {
   lines: MapLine[];
   stops?: PlannedStop[];
   points?: MapPoint[];
+  /** Pressing and holding the map, e.g. to add a place there. */
+  onLongPress?: (coordinate: LonLat) => void;
   style?: StyleProp<ViewStyle>;
 };
 
-export function RouteMap({ lines, stops, points, style }: RouteMapProps) {
+export function RouteMap({ lines, stops, points, onLongPress, style }: RouteMapProps) {
   const theme = useTheme();
   const mapRef = useRef<MapView>(null);
   const [ready, setReady] = useState(false);
@@ -73,7 +77,17 @@ export function RouteMap({ lines, stops, points, style }: RouteMapProps) {
   }, [ready, corners]);
 
   return (
-    <MapView ref={mapRef} style={[styles.map, style]} onMapReady={() => setReady(true)}>
+    <MapView
+      ref={mapRef}
+      style={[styles.map, style]}
+      onMapReady={() => setReady(true)}
+      onLongPress={
+        onLongPress &&
+        ((event) => {
+          const { longitude, latitude } = event.nativeEvent.coordinate;
+          onLongPress([longitude, latitude]);
+        })
+      }>
       {shapes.map((line) =>
         line.latLngs.length > 1 ? (
           <Polyline
@@ -96,23 +110,64 @@ export function RouteMap({ lines, stops, points, style }: RouteMapProps) {
           pinColor={theme.accent}
         />
       ))}
-      {points?.map((point) => (
-        <Marker
-          key={point.key}
-          coordinate={toLatLng(point.coordinate)}
-          title={point.title}
-          description={point.description}
-          image={point.icon}
-          anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={false}
-        />
-      ))}
+      {points?.map((point) =>
+        typeof point.icon === 'number' ? (
+          <Marker
+            key={point.key}
+            coordinate={toLatLng(point.coordinate)}
+            title={point.title}
+            description={point.description}
+            image={point.icon}
+            anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={false}
+            onCalloutPress={point.onCalloutPress}
+          />
+        ) : (
+          <BadgeMarker key={point.key} point={point} badge={point.icon} />
+        )
+      )}
     </MapView>
+  );
+}
+
+/** A marker drawn as a symbol on a coloured circle, so new supply categories need no image. */
+function BadgeMarker({ point, badge }: { point: MapPoint; badge: { emoji: string; color: string } }) {
+  // Android draws a view marker only while it tracks changes; stop once it's been drawn.
+  const [tracking, setTracking] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setTracking(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <Marker
+      coordinate={toLatLng(point.coordinate)}
+      title={point.title}
+      description={point.description}
+      anchor={{ x: 0.5, y: 0.5 }}
+      tracksViewChanges={tracking}
+      onCalloutPress={point.onCalloutPress}>
+      <View style={[styles.badge, { backgroundColor: badge.color }]}>
+        <Text style={styles.badgeText}>{badge.emoji}</Text>
+      </View>
+    </Marker>
   );
 }
 
 const styles = StyleSheet.create({
   map: {
     borderRadius: Spacing.three,
+  },
+  badge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#F3E7CF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: 15,
+    lineHeight: 18,
   },
 });

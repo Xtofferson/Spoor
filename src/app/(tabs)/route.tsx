@@ -14,12 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   FuelRangeCard,
   FuelStopPicker,
+  SupplyWarnings,
   FuelStretchList,
   SuppliesStatus,
   suppliesFound,
   WaterCard,
   WaterStretchList,
 } from '@/components/supplies-plan';
+import { MapLayerFilter, type MapLayer } from '@/components/map-layer-filter';
 import { RouteMap, type MapLine, type MapPoint } from '@/components/route-map';
 import { SurfaceBar, SurfaceLegend } from '@/components/surface-bar';
 import { ThemedText } from '@/components/themed-text';
@@ -42,7 +44,24 @@ import {
 import { formatDistance, formatDuration } from '@/lib/route-math';
 import { applyChosenRoutes, useRoutePlan, type ShownRoute } from '@/lib/route-plan';
 import { buildRouteLine } from '@/lib/route-points';
-import { useRouteSupplies, type SuppliesState } from '@/lib/route-supplies';
+import { useHiddenMapLayers } from '@/lib/map-layers';
+import { routeShapeId, useRouteSupplies, type SuppliesState } from '@/lib/route-supplies';
+import {
+  seedFromOsm,
+  useRememberPoints,
+  useSupplyCategories,
+  useSupplyPoints,
+  type SupplyPointsState,
+} from '@/lib/supplies';
+import {
+  mergePoints,
+  osmFilters,
+  planSupplies,
+  pointFromOsm,
+  pointsNearRoute,
+  type SupplyCategory,
+  type SupplyPlan,
+} from '@/lib/supply-points';
 import { saveFuelStops, useTrips, type Trip } from '@/lib/trips';
 import { useVehicle } from '@/lib/vehicle';
 import { nightsAt, stopNeedsTreating, waterStopsAlong, waterStretches, type WaterStop, type WaterStretch } from '@/lib/water';
@@ -82,7 +101,12 @@ export default function RouteScreen() {
   const people = trip?.people ?? 1;
   const [suppliesRefreshKey, setSuppliesRefreshKey] = useState(0);
   const line = useMemo(() => (route ? buildRouteLine(route.legs) : undefined), [route]);
-  const supplies = useRouteSupplies(line?.points, suppliesRefreshKey);
+  const categories = useSupplyCategories();
+  const supplyFilters = useMemo(() => osmFilters(categories), [categories]);
+  // Places found on OpenStreetMap are shared with everyone through Supabase.
+  const supplies = useRouteSupplies(line?.points, suppliesRefreshKey, supplyFilters, (fresh) => {
+    void seedFromOsm(fresh, categories);
+  });
   const found = suppliesFound(supplies);
   const fuelStops = useMemo(() => (line && found ? fuelStopsAlong(line, found.fuel, found.settlements) : []), [line, found]);
   // Fuel is planned between the towns chosen for the trip, or every stop if none are.
@@ -113,9 +137,43 @@ export default function RouteScreen() {
         : [],
     [line, found, waterStops, vehicle, people, nights]
   );
+
+  // Butcheries, firewood, checkpoints…: shared ones from Supabase, fresh ones from
+  // OpenStreetMap, and ones added on this phone, within 10 km of the route.
+  const routeId = useMemo(() => (line ? routeShapeId(line.points) : ''), [line]);
+  const pointsState = useSupplyPoints(routeId, line?.points);
+  const osmPoints = useMemo(
+    () => (found?.supplies ?? []).map((place) => pointFromOsm(place, categories)),
+    [found, categories]
+  );
+  const supplyPoints = useMemo(
+    () => (line ? pointsNearRoute(line, mergePoints(pointsState.shared, osmPoints, pointsState.pending)) : []),
+    [line, pointsState.shared, pointsState.pending, osmPoints]
+  );
+  useRememberPoints(supplyPoints);
+  const supplyPlan = useMemo(
+    () => (line ? planSupplies(line, supplyPoints, categories, found?.settlements) : undefined),
+    [line, supplyPoints, categories, found]
+  );
+
+  const hiddenLayers = useHiddenMapLayers();
+  const layers: MapLayer[] = useMemo(
+    () => [
+      { id: 'fuel', label: 'Fuel', emoji: '⛽', color: theme.warning },
+      { id: 'water', label: 'Water', emoji: '💧', color: '#3E7CA6' },
+      ...categories.map((category) => ({
+        id: category.id,
+        label: category.label,
+        emoji: category.emoji,
+        color: category.color,
+      })),
+    ],
+    [categories, theme.warning]
+  );
+
   const mapPoints: MapPoint[] = useMemo(
     () => [
-      ...fuelStops.map((stop, index) => {
+      ...(hiddenLayers.includes('fuel') ? [] : fuelStops).map((stop, index) => {
         const planned = plannedStops.includes(stop);
         return {
           // The icon is part of the key, so the marker is redrawn when a stop is chosen.
@@ -126,7 +184,7 @@ export default function RouteScreen() {
           icon: planned ? FUEL_ICON : FUEL_OTHER_ICON,
         };
       }),
-      ...waterStops.map((stop, index) => {
+      ...(hiddenLayers.includes('water') ? [] : waterStops).map((stop, index) => {
         const treat = stopNeedsTreating(stop);
         const kinds = [...new Set(stop.places.map((p) => p.kind))].join(', ');
         const undrinkable = stop.places.every((p) => p.notForDrinking);
@@ -138,8 +196,25 @@ export default function RouteScreen() {
           icon: treat || undrinkable ? WATER_TREAT_ICON : WATER_ICON,
         };
       }),
+      ...supplyPoints.flatMap((point) => {
+        const category = categories.find((c) => c.id === point.category);
+        if (!category || hiddenLayers.includes(category.id)) return [];
+        const about = point.pending
+          ? 'Not uploaded yet'
+          : (category.routeWarning ?? point.openingHours ?? (point.source === 'OSM' ? 'From OpenStreetMap' : 'Added by a traveller'));
+        return [
+          {
+            key: `supply-${point.id}`,
+            coordinate: point.coordinates,
+            title: `${category.label} · ${point.name}`,
+            description: `${about} · Tap for details`,
+            icon: { emoji: category.emoji, color: category.color },
+            onCalloutPress: () => router.push({ pathname: '/supply/[id]', params: { id: point.id } }),
+          },
+        ];
+      }),
     ],
-    [fuelStops, plannedStops, waterStops]
+    [fuelStops, plannedStops, waterStops, supplyPoints, categories, hiddenLayers]
   );
 
   function selectTrip(id: string) {
@@ -168,8 +243,12 @@ export default function RouteScreen() {
                 lines={lines}
                 stops={route?.stops}
                 points={mapPoints}
+                onLongPress={([lon, lat]) =>
+                  router.push({ pathname: '/supply/new', params: { lat: String(lat), lon: String(lon) } })
+                }
                 style={{ height: Math.max(260, height * 0.4) }}
               />
+              {route && <MapLayerFilter layers={layers} />}
 
               {state.status === 'idle' && (
                 <ThemedText themeColor="textSecondary">
@@ -204,6 +283,9 @@ export default function RouteScreen() {
                   onToggleFuelStop={(stop) => saveFuelStops(trip, toggleFuelStopChoice(fuelChoices, stop))}
                   waterStretches={waterStretchList}
                   waterStops={waterStops}
+                  categories={categories}
+                  supplyPlan={supplyPlan}
+                  supplyPoints={pointsState}
                   onRefreshSupplies={() => setSuppliesRefreshKey((key) => key + 1)}
                 />
               )}
@@ -276,6 +358,9 @@ function RouteDetails({
   onToggleFuelStop,
   waterStretches,
   waterStops,
+  categories,
+  supplyPlan,
+  supplyPoints,
   onRefreshSupplies,
 }: {
   route: ShownRoute;
@@ -289,6 +374,9 @@ function RouteDetails({
   onToggleFuelStop: (stop: FuelStop) => void;
   waterStretches: WaterStretch[];
   waterStops: WaterStop[];
+  categories: SupplyCategory[];
+  supplyPlan?: SupplyPlan;
+  supplyPoints: SupplyPointsState;
   onRefreshSupplies: () => void;
 }) {
   const theme = useTheme();
@@ -318,6 +406,8 @@ function RouteDetails({
         stops={waterStops}
         supplies={supplies}
       />
+
+      <SupplyWarnings plan={supplyPlan} categories={categories} points={supplyPoints} />
 
       <SuppliesStatus
         supplies={supplies}
