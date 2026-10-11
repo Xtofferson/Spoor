@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { TabList, TabSlot, TabTrigger, Tabs, type TabListProps, type TabTriggerSlotProps } from 'expo-router/ui';
+import { TabList, TabSlot, TabTrigger, Tabs, type TabTriggerSlotProps } from 'expo-router/ui';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,16 +44,23 @@ export default function TripLayout() {
     <TripPlanProvider trip={trip}>
       <ThemedView style={styles.flex}>
         <Tabs style={styles.flex}>
+          {/*
+            The tabs are defined here, hidden: Tabs only reads a TabList that's its direct
+            child. The pills in the header below switch tabs by name.
+          */}
+          <TabList style={styles.hidden}>
+            {tabs.map((tab) => (
+              <TabTrigger key={tab.name} name={tab.name} href={`/trips/${trip.id}${tab.path}` as Href} />
+            ))}
+          </TabList>
           <TripHeader title={trip.name} tripId={trip.id}>
-            <TabList asChild>
-              <PillBar>
-                {tabs.map((tab) => (
-                  <TabTrigger key={tab.name} name={tab.name} href={`/trips/${trip.id}${tab.path}` as Href} asChild>
-                    <Pill>{tab.label}</Pill>
-                  </TabTrigger>
-                ))}
-              </PillBar>
-            </TabList>
+            <PillBar>
+              {tabs.map((tab) => (
+                <TabTrigger key={tab.name} name={tab.name} asChild>
+                  <Pill>{tab.label}</Pill>
+                </TabTrigger>
+              ))}
+            </PillBar>
           </TripHeader>
           <TabSlot style={styles.flex} />
         </Tabs>
@@ -126,10 +133,10 @@ function SquareButton({ icon, label, onPress }: { icon: SymbolViewProps['name'];
   );
 }
 
-function PillBar({ children, ...props }: TabListProps) {
+function PillBar({ children }: { children: React.ReactNode }) {
   const t = useT();
   return (
-    <View {...props} accessibilityRole="tablist" accessibilityLabel={t('trip.sections')}>
+    <View accessibilityRole="tablist" accessibilityLabel={t('trip.sections')}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
         {children}
       </ScrollView>
@@ -161,6 +168,9 @@ function Pill({ children, isFocused, ...props }: TabTriggerSlotProps) {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  hidden: {
+    display: 'none',
   },
   header: {
     gap: 14,
