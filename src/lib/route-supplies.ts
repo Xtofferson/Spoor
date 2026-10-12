@@ -5,6 +5,7 @@ import { t } from '@/lib/i18n';
 import { shareRequest } from '@/lib/in-flight';
 import { simplifyLine, type LonLat } from '@/lib/route-math';
 import type { Settlement } from '@/lib/route-points';
+import { markUsed } from '@/lib/saved-data';
 import { storage } from '@/lib/storage';
 import { pointFromRow, settlementFromRow, type PointRow, type SettlementRow, type SupplyPoint } from '@/lib/supply-points';
 
@@ -146,7 +147,9 @@ function readSaved(key: string): SavedSupplies | undefined {
   const raw = storage.getItem(key);
   if (!raw) return undefined;
   try {
-    return JSON.parse(raw) as SavedSupplies;
+    const value = JSON.parse(raw) as SavedSupplies;
+    markUsed(key);
+    return value;
   } catch {
     return undefined;
   }
@@ -193,6 +196,7 @@ export function useRouteSupplies(route: LonLat[] | undefined, refreshKey = 0, ve
         // An incomplete result is kept, but looked up again next time the trip opens.
         const value: SavedSupplies = { ...supplies, fetchedAt: Date.now() };
         storage.setItem(key, JSON.stringify(value));
+        markUsed(key);
         return value;
       })
     )

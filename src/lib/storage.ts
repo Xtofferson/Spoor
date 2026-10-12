@@ -11,4 +11,8 @@ export const storage = {
   removeItem(key: string) {
     Storage.removeItemSync(key);
   },
+  /** Every key saved, e.g. to clean up old entries. */
+  keys(): string[] {
+    return Storage.getAllKeysSync();
+  },
 };

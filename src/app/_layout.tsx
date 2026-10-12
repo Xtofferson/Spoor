@@ -13,8 +13,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
+import { routePlanKey } from '@/lib/route-plan';
+import { cleanUpSavedData } from '@/lib/saved-data';
 import { useSupplySync } from '@/lib/supplies';
 import { useTripSync } from '@/lib/trip-sync';
+import type { Trip } from '@/lib/trips';
 import { useVehicleSync } from '@/lib/vehicle';
 
 // Keep the splash screen up until the fonts are loaded and we know whether someone is signed in.
@@ -68,6 +71,12 @@ function RootStack() {
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
   }, [loading]);
+
+  // Once the app has settled, remove saved lookups it no longer needs.
+  useEffect(() => {
+    const timer = setTimeout(() => cleanUpSavedData((trip: Trip) => [routePlanKey(trip)]), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (loading) return null;
 

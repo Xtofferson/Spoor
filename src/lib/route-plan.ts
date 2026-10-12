@@ -25,6 +25,7 @@ import {
   type RouteTag,
   type SurfaceShares,
 } from '@/lib/route-math';
+import { markUsed } from '@/lib/saved-data';
 import { storage } from '@/lib/storage';
 import type { Trip } from '@/lib/trips';
 
@@ -109,10 +110,17 @@ function readSaved<T>(key: string): T | undefined {
   const raw = storage.getItem(key);
   if (!raw) return undefined;
   try {
-    return JSON.parse(raw) as T;
+    const value = JSON.parse(raw) as T;
+    markUsed(key);
+    return value;
   } catch {
     return undefined;
   }
+}
+
+function save(key: string, value: unknown) {
+  storage.setItem(key, JSON.stringify(value));
+  markUsed(key);
 }
 
 function placeKey(name: string, previous?: LonLat) {
@@ -188,7 +196,7 @@ async function locateStop(stopId: string, name: string, previous?: LonLat): Prom
   if (!place) throw new RouteError(t('errors.placeNotFound', { name }));
 
   const stop = { name, label: place.label, coordinates: place.coordinates };
-  storage.setItem(key, JSON.stringify(stop));
+  save(key, stop);
   return { ...stop, stopId };
 }
 
@@ -469,7 +477,7 @@ export function useRouteOptions(from: LonLat | undefined, to: LonLat | undefined
       .map((point) => point.split(',').map(Number) as LonLat);
     shareRequest(key, () =>
       fetchRouteOptions(a, b).then((options) => {
-        storage.setItem(key, JSON.stringify(options));
+        save(key, options);
         return options;
       })
     )
@@ -494,6 +502,23 @@ export function useRouteOptions(from: LonLat | undefined, to: LonLat | undefined
 
 // -- Hook for the whole trip --------------------------------------------------
 
+/** The stops the planner routes through: those with a name or a pin. */
+function routeInputs(trip: Pick<Trip, 'stops'> | undefined): RouteStopInput[] {
+  return (trip?.stops ?? [])
+    .map((stop) => ({
+      stopId: stop.id,
+      name: stop.name.trim(),
+      coordinates: stop.coordinates,
+      label: stop.placeLabel,
+    }))
+    .filter((stop) => stop.name !== '' || stop.coordinates);
+}
+
+/** Where a trip's route plan is saved on the phone, so cleaning up never removes it. */
+export function routePlanKey(trip: Pick<Trip, 'stops'>): string {
+  return planKey(routeId(routeInputs(trip)));
+}
+
 export type RoutePlanState =
   | { status: 'idle' }
   | { status: 'loading'; plan?: RoutePlan }
@@ -506,14 +531,7 @@ export type RoutePlanState =
  * Chosen leg routes aren't part of this; apply them with `applyChosenRoutes`.
  */
 export function useRoutePlan(trip: Trip | undefined, refreshKey = 0): RoutePlanState {
-  const inputs: RouteStopInput[] = (trip?.stops ?? [])
-    .map((stop) => ({
-      stopId: stop.id,
-      name: stop.name.trim(),
-      coordinates: stop.coordinates,
-      label: stop.placeLabel,
-    }))
-    .filter((stop) => stop.name !== '' || stop.coordinates);
+  const inputs = routeInputs(trip);
   // A string, so effects can depend on the stops by value.
   const id = routeId(inputs);
   const hasRoute = inputs.length >= 2;
@@ -535,7 +553,7 @@ export function useRoutePlan(trip: Trip | undefined, refreshKey = 0): RoutePlanS
     );
     shareRequest(planKey(id), () =>
       planRoute(stops).then((plan) => {
-        storage.setItem(planKey(id), JSON.stringify(plan));
+        save(planKey(id), plan);
         return plan;
       })
     )

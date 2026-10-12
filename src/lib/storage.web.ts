@@ -24,4 +24,15 @@ export const storage = {
       // Nothing to remove if storage is unavailable.
     }
   },
+  /** Every key saved, e.g. to clean up old entries. */
+  keys(): string[] {
+    try {
+      if (typeof localStorage === 'undefined') return [];
+      return Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).filter(
+        (key): key is string => key !== null
+      );
+    } catch {
+      return [];
+    }
+  },
 };
