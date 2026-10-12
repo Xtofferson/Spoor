@@ -312,11 +312,11 @@ describe('choosing where to fill up', () => {
 
   it('gives each stop its km from the start and from the last planned fill-up', () => {
     const rows = fuelStopRows(longLine, stops, choose('Town 400'), landCruiser);
-    expect(rows.map((r) => [Math.round(r.km), !!r.choice, r.since, Math.round(r.sinceKm)])).toEqual([
-      [200, false, 'A', 200],
-      [400, true, 'A', 400],
-      [600, false, 'Town 400', 200],
-      [800, false, 'Town 400', 400],
+    expect(rows.map((r) => [Math.round(r.km), !!r.choice, r.since, r.sinceStart, Math.round(r.sinceKm)])).toEqual([
+      [200, false, 'A', true, 200],
+      [400, true, 'A', true, 400],
+      [600, false, 'Town 400', false, 200],
+      [800, false, 'Town 400', false, 400],
     ]);
     // 400 km of tar is 52 L of the 136 L usable.
     expect(rows[1].sinceShare).toBeCloseTo(52 / 136);

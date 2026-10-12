@@ -5,11 +5,14 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts, Radius, Spacing } from '@/constants/theme';
+import { Note } from '@/components/trip-tab';
+import { Button, Card, MIN_TOUCH, TextButton } from '@/components/ui';
+import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   RESERVE_SHARE,
   safeRangeKm,
+  TIGHT_SHARE,
   stretchAdvice,
   type FuelStop,
   type FuelStopRow,
@@ -49,22 +52,14 @@ export function suppliesFound(state: SuppliesState): SavedSupplies | undefined {
 
 /** A card asking for something missing (e.g. the vehicle), with a button to settings. */
 function MissingCard({ title, text, action }: { title: string; text: string; action: string }) {
-  const theme = useTheme();
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      <ThemedText type="smallBold">{title}</ThemedText>
+    <Card outlined>
+      <ThemedText type="heading">{title}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {text}
       </ThemedText>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/vehicle')}
-        style={({ pressed }) => [styles.outlineButton, { borderColor: theme.accent }, pressed && styles.pressed]}>
-        <ThemedText type="smallBold" style={{ color: theme.accent }}>
-          {action}
-        </ThemedText>
-      </Pressable>
-    </ThemedView>
+      <Button compact variant="outline" label={action} onPress={() => router.push('/vehicle')} />
+    </Card>
   );
 }
 
@@ -88,8 +83,7 @@ export function FuelRangeCard({ vehicle, tripLitres }: { vehicle?: Vehicle; trip
           accessibilityRole="button"
           accessibilityLabel={`${vehicleSummary(vehicle, t)}. ${t('me.editVehicle')}`}
           onPress={() => router.push('/vehicle')}
-          hitSlop={Spacing.two}
-          style={({ pressed }) => [styles.shrink, pressed && styles.pressed]}>
+          style={({ pressed }) => [styles.vehicleLink, pressed && styles.pressed]}>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {vehicleSummary(vehicle, t)}
           </ThemedText>
@@ -112,10 +106,12 @@ export function FuelRangeCard({ vehicle, tripLitres }: { vehicle?: Vehicle; trip
               onPress={() => setTerrain(key)}
               style={({ pressed }) => [
                 styles.terrain,
-                { backgroundColor: selected ? theme.text : theme.backgroundSelected },
+                selected
+                  ? { backgroundColor: theme.text, borderColor: theme.text }
+                  : { backgroundColor: theme.backgroundElement, borderColor: theme.borderSoft },
                 pressed && styles.pressed,
               ]}>
-              <ThemedText type="smallBold" style={{ color: selected ? theme.background : theme.text }}>
+              <ThemedText type="smallBold" style={{ color: selected ? theme.backgroundElement : theme.text }}>
                 {t(`fuel.terrain.${key}`)}
               </ThemedText>
             </Pressable>
@@ -190,6 +186,9 @@ export function FuelStopPicker({
   const t = useT();
   const chosenCount = rows.filter((row) => row.choice).length;
   if (rows.length === 0) return null;
+  // Red past the safe range, ochre when it's tight, as on the stretches between fuel.
+  const sinceColor = (share?: number) =>
+    share === undefined || share <= TIGHT_SHARE ? theme.textSecondary : share > 1 ? theme.danger : theme.warningText;
 
   return (
     <View style={styles.list}>
@@ -204,12 +203,24 @@ export function FuelStopPicker({
             row.afterStopKm < 1
               ? t('fuel.atPlace', { place: row.afterStop })
               : t('fuel.kmFrom', { km: km(row.afterStopKm), place: row.afterStop });
+          // Once a town is ticked, each row also shows how far it is since the last fill-up.
+          const sinceFill =
+            chosenCount > 0
+              ? [
+                  row.sinceStart
+                    ? t('fuel.sinceStart', { km: km(row.sinceKm), place: row.since })
+                    : t('fuel.sinceFill', { km: km(row.sinceKm), place: row.since }),
+                  row.sinceShare !== undefined && t('fuel.ofRange', { percent: Math.round(row.sinceShare * 100) }),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : undefined;
           return (
             <Pressable
               key={`${row.stop.label}-${row.km}`}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: chosen }}
-              accessibilityLabel={`${row.stop.label}, ${from}. ${t('fuel.fillHere')}`}
+              accessibilityLabel={`${row.stop.label}, ${from}.${sinceFill ? ` ${sinceFill}.` : ''} ${t('fuel.fillHere')}`}
               onPress={() => onToggleStop(row.stop)}
               style={({ pressed }) => [
                 styles.stopRow,
@@ -222,6 +233,11 @@ export function FuelStopPicker({
                 <ThemedText type="small" themeColor="textSecondary">
                   {from}
                 </ThemedText>
+                {sinceFill && (
+                  <ThemedText type="small" style={[styles.since, { color: sinceColor(row.sinceShare) }]}>
+                    {sinceFill}
+                  </ThemedText>
+                )}
               </View>
             </Pressable>
           );
@@ -278,8 +294,7 @@ export function WaterCard({ vehicle, people }: { vehicle?: Vehicle; people: numb
           accessibilityRole="button"
           accessibilityLabel={`${t('water.carried', { litres: vehicle.waterLitres })}. ${t('me.editVehicle')}`}
           onPress={() => router.push('/vehicle')}
-          hitSlop={Spacing.two}
-          style={({ pressed }) => [styles.shrink, pressed && styles.pressed]}>
+          style={({ pressed }) => [styles.vehicleLink, pressed && styles.pressed]}>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
             {t('water.carried', { litres: vehicle.waterLitres })} · {t('water.people', { count: people })}
           </ThemedText>
@@ -438,8 +453,39 @@ export function SupplyWarnings({
 
 // -- Shared ---------------------------------------------------------------------
 
-/** Loading and errors for the fuel and water lookup, and where the data came from. */
-export function SuppliesStatus({
+/** Whether fuel, water and supplies are being looked up, or couldn't be: for the top of the tab. */
+export function SuppliesProgress({ supplies }: { supplies: SuppliesState }) {
+  const theme = useTheme();
+  const t = useT();
+  const found = suppliesFound(supplies);
+  if (supplies.status === 'loading' && !found) {
+    return (
+      <View style={styles.row} accessibilityLiveRegion="polite">
+        <ActivityIndicator color={theme.accent} />
+        <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
+          {supplies.progress && supplies.progress.total > 1
+            ? t('supplies.checkingAreas', { done: supplies.progress.done + 1, total: supplies.progress.total })
+            : t('supplies.finding')}
+        </ThemedText>
+      </View>
+    );
+  }
+  if (supplies.status === 'error') {
+    return (
+      <View accessibilityRole="alert">
+        <Note tone="danger">
+          {supplies.message}
+          {found ? ` ${t('supplies.showingSaved')}` : ''}
+        </Note>
+      </View>
+    );
+  }
+  if (found?.incomplete) return <Note tone="warning">{t('supplies.incomplete')}</Note>;
+  return null;
+}
+
+/** Where the places came from and when, with a button to look them up again. */
+export function SuppliesSource({
   supplies,
   fuelStops,
   waterStops,
@@ -450,54 +496,20 @@ export function SuppliesStatus({
   waterStops: number;
   onRefresh: () => void;
 }) {
-  const theme = useTheme();
   const t = useT();
   const found = suppliesFound(supplies);
+  if (!found) return null;
   return (
-    <View style={styles.list}>
-      {supplies.status === 'loading' && !found && (
-        <View style={styles.row}>
-          <ActivityIndicator color={theme.accent} />
-          <ThemedText type="small" themeColor="textSecondary">
-            {supplies.progress && supplies.progress.total > 1
-              ? t('supplies.checkingAreas', { done: supplies.progress.done + 1, total: supplies.progress.total })
-              : t('supplies.finding')}
-          </ThemedText>
-        </View>
-      )}
-      {supplies.status === 'error' && (
-        <ThemedText type="small" style={{ color: theme.danger }} accessibilityRole="alert">
-          {supplies.message}
-          {found ? ` ${t('supplies.showingSaved')}` : ''}
-        </ThemedText>
-      )}
-      {found?.incomplete && (
-        <ThemedText type="small" style={{ color: theme.warningText }}>
-          {t('supplies.incomplete')}
-        </ThemedText>
-      )}
-      {found && (
-        <View style={styles.sourceRow}>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
-            {t('supplies.source', {
-              fuel: t('supplies.fuelStops', { count: fuelStops }),
-              water: t('supplies.waterPoints', { count: waterStops }),
-              date: shortDate(found.fetchedAt),
-            })}
-          </ThemedText>
-          {supplies.status !== 'loading' && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('supplies.refreshLabel')}
-              onPress={onRefresh}
-              hitSlop={Spacing.two}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                {t('supplies.refresh')}
-              </ThemedText>
-            </Pressable>
-          )}
-        </View>
+    <View style={styles.sourceRow}>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
+        {t('supplies.source', {
+          fuel: t('supplies.fuelStops', { count: fuelStops }),
+          water: t('supplies.waterPoints', { count: waterStops }),
+          date: shortDate(found.fetchedAt),
+        })}
+      </ThemedText>
+      {supplies.status !== 'loading' && (
+        <TextButton label={t('supplies.refresh')} accessibilityLabel={t('supplies.refreshLabel')} onPress={onRefresh} />
       )}
     </View>
   );
@@ -586,7 +598,7 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'center',
     gap: Spacing.two,
   },
   bigRow: {
@@ -606,17 +618,16 @@ const styles = StyleSheet.create({
   },
   terrain: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: 10,
+    minHeight: MIN_TOUCH,
+    borderRadius: Radius.pill,
+    borderWidth: BorderWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outlineButton: {
-    alignItems: 'center',
+  vehicleLink: {
+    flexShrink: 1,
+    minHeight: MIN_TOUCH,
     justifyContent: 'center',
-    minHeight: 44,
-    borderWidth: 1.5,
-    borderRadius: 12,
   },
   list: {
     gap: 10,
@@ -654,7 +665,7 @@ const styles = StyleSheet.create({
   },
   sourceRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.three,
   },
   picker: {
@@ -663,6 +674,9 @@ const styles = StyleSheet.create({
   },
   town: {
     fontWeight: 600,
+  },
+  since: {
+    fontWeight: 500,
   },
   stopRow: {
     flexDirection: 'row',

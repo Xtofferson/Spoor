@@ -1,9 +1,9 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BorderWidth, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useT } from '@/lib/i18n';
 import { useTripPlan } from '@/lib/trip-plan';
@@ -64,23 +64,6 @@ export function Note({ tone, children }: { tone: 'warning' | 'good' | 'danger'; 
   );
 }
 
-/** A cream button with a dark outline, e.g. "Compare routes". */
-export function OutlineButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.outline,
-        { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-        pressed && styles.pressed,
-      ]}>
-      <ThemedText style={styles.outlineText}>{label}</ThemedText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
@@ -106,21 +89,5 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontWeight: 500,
-  },
-  outline: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    padding: 14,
-    borderWidth: BorderWidth,
-    borderRadius: Radius.card,
-  },
-  outlineText: {
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: 600,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

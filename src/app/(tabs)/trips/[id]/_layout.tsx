@@ -11,6 +11,7 @@ import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dateLocale, useLanguage, useT } from '@/lib/i18n';
 import { TripPlanProvider, useTripPlan } from '@/lib/trip-plan';
+import { tripShareText, shareAnyWay } from '@/lib/trip-share';
 import { fromDateString, tripDays, useTrip } from '@/lib/trips';
 
 /**
@@ -88,6 +89,7 @@ function TripHeader({ title, tripId, children }: { title: string; tripId?: strin
           </ThemedText>
           {tripId && <TripMeta />}
         </View>
+        {tripId && <ShareButton />}
         {tripId && (
           <SquareButton
             icon={{ ios: 'pencil', android: 'edit', web: 'edit' }}
@@ -98,6 +100,20 @@ function TripHeader({ title, tripId, children }: { title: string; tripId?: strin
       </View>
       {children}
     </View>
+  );
+}
+
+/** Shares the plan through the phone's share sheet, e.g. on WhatsApp. */
+function ShareButton() {
+  const t = useT();
+  const locale = dateLocale(useLanguage());
+  const plan = useTripPlan();
+  return (
+    <SquareButton
+      icon={{ ios: 'square.and.arrow.up', android: 'share', web: 'share' }}
+      label={t('trip.shareLabel', { name: plan.trip.name })}
+      onPress={() => void shareAnyWay(tripShareText(plan, t, locale))}
+    />
   );
 }
 

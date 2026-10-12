@@ -1,26 +1,30 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { canPickOnMap, LocationPicker } from '@/components/location-picker';
 import { MapLayerFilter, type MapLayer } from '@/components/map-layer-filter';
 import { RouteMap, type MapLine, type MapPoint } from '@/components/route-map';
 import {
   FuelRangeCard,
   FuelStopPicker,
   FuelStretchList,
-  SuppliesStatus,
+  SuppliesProgress,
+  SuppliesSource,
   SupplyWarnings,
   WaterCard,
   WaterStretchList,
 } from '@/components/supplies-plan';
 import { ThemedText } from '@/components/themed-text';
 import { Note, RouteStatus, TripTabScreen } from '@/components/trip-tab';
+import { Button, TextButton } from '@/components/ui';
 import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { legFuelLitres, stretchAdvice, toggleFuelStopChoice } from '@/lib/fuel';
 import { useT, type Translate } from '@/lib/i18n';
 import { useHiddenMapLayers } from '@/lib/map-layers';
 import { categoryText, gapTitle } from '@/lib/supply-points';
+import type { LonLat } from '@/lib/route-math';
 import { useTripPlan, type TripPlan } from '@/lib/trip-plan';
 import { saveFuelStops } from '@/lib/trips';
 import { formatDays, stopNeedsTreating, WATER_PER_PERSON_PER_DAY, waterKindLabel } from '@/lib/water';
@@ -115,58 +119,88 @@ export default function SuppliesTab() {
     [fuelStops, plannedFuelStops, waterStops, supplyPoints, categories, hiddenLayers, t]
   );
 
+  const [showDetails, setShowDetails] = useState(false);
+  const [addingPlace, setAddingPlace] = useState(false);
+  const addPlaceAt = ([lon, lat]: LonLat) => {
+    setAddingPlace(false);
+    router.push({ pathname: '/supply/new', params: { lat: String(lat), lon: String(lon) } });
+  };
+  // Without a vehicle (or the water it carries), the cards asking for it stay in view.
+  const needsVehicle = !vehicle;
+  const needsWater = !!vehicle && vehicle.waterLitres === undefined;
+
   const tripLitres = vehicle && route ? route.legs.reduce((sum, leg) => sum + legFuelLitres(leg, vehicle.consumption), 0) : undefined;
 
   return (
     <TripTabScreen>
+      {route && <SuppliesProgress supplies={supplies} />}
       {route && plan.found && <Summary plan={plan} />}
       <View style={[styles.mapFrame, { borderColor: theme.border, backgroundColor: theme.backgroundSelected }]}>
         <RouteMap
           lines={lines}
           stops={route?.stops}
           points={mapPoints}
-          onLongPress={([lon, lat]) =>
-            router.push({ pathname: '/supply/new', params: { lat: String(lat), lon: String(lon) } })
-          }
+          onLongPress={addPlaceAt}
           style={{ height: Math.max(240, height * 0.35) }}
         />
       </View>
       {route && (
         <>
           <MapLayerFilter layers={layers} />
-          <ThemedText type="small" themeColor="textSecondary">
-            {t('supplies.longPressHint')}
-          </ThemedText>
+          {canPickOnMap && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {t('supplies.longPressHint')}
+            </ThemedText>
+          )}
+          {canPickOnMap && (
+            <Button
+              variant="outline"
+              icon={{ ios: 'mappin.and.ellipse', android: 'add_location_alt', web: 'add_location_alt' }}
+              label={t('supplies.addPlace')}
+              onPress={() => setAddingPlace(true)}
+            />
+          )}
         </>
       )}
       <RouteStatus />
 
       {route && (
         <>
-          <FuelRangeCard vehicle={vehicle} tripLitres={tripLitres} />
+          {needsVehicle && <FuelRangeCard />}
+          {needsWater && <WaterCard vehicle={vehicle} people={people} />}
           <FuelStopPicker
             rows={plan.fuelRows}
             onToggleStop={(stop) => saveFuelStops(trip, toggleFuelStopChoice(plan.fuelChoices, stop))}
           />
-          <FuelStretchList
-            vehicle={vehicle}
-            stretches={plan.fuelStretches}
-            supplies={supplies}
-            stopCount={fuelStops.length}
-          />
 
-          <WaterCard vehicle={vehicle} people={people} />
-          <WaterStretchList
-            vehicle={vehicle}
-            people={people}
-            stretches={plan.waterStretches}
-            stops={waterStops}
-            supplies={supplies}
-          />
+          <View style={styles.details}>
+            <TextButton
+              label={showDetails ? t('supplies.hideDetails') : t('supplies.showDetails')}
+              onPress={() => setShowDetails((shown) => !shown)}
+            />
+          </View>
+          {showDetails && (
+            <>
+              {!needsVehicle && <FuelRangeCard vehicle={vehicle} tripLitres={tripLitres} />}
+              <FuelStretchList
+                vehicle={vehicle}
+                stretches={plan.fuelStretches}
+                supplies={supplies}
+                stopCount={fuelStops.length}
+              />
+              {!needsWater && <WaterCard vehicle={vehicle} people={people} />}
+              <WaterStretchList
+                vehicle={vehicle}
+                people={people}
+                stretches={plan.waterStretches}
+                stops={waterStops}
+                supplies={supplies}
+              />
+              <SupplyWarnings plan={plan.supplyPlan} categories={categories} pendingCount={plan.pending.length} />
+            </>
+          )}
 
-          <SupplyWarnings plan={plan.supplyPlan} categories={categories} pendingCount={plan.pending.length} />
-
-          <SuppliesStatus
+          <SuppliesSource
             supplies={supplies}
             fuelStops={fuelStops.length}
             waterStops={waterStops.length}
@@ -174,6 +208,14 @@ export default function SuppliesTab() {
           />
         </>
       )}
+
+      <LocationPicker
+        visible={addingPlace}
+        title={t('supplies.addPlace')}
+        near={route?.stops[0]?.coordinates}
+        onCancel={() => setAddingPlace(false)}
+        onPick={addPlaceAt}
+      />
     </TripTabScreen>
   );
 }
@@ -266,6 +308,9 @@ const styles = StyleSheet.create({
   },
   countName: {
     fontWeight: 600,
+  },
+  details: {
+    alignItems: 'center',
   },
   mapFrame: {
     borderWidth: BorderWidth,

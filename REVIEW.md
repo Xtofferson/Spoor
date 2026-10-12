@@ -2,7 +2,7 @@
 
 Reviewed on 12 October 2026, at commit `3183d30` (navigation and Trips redesign). No code was changed for this review.
 
-**Progress:** ✅ #1, #2, #3, #4, #5, #7, #9, #14, #16 and #17 are fixed.
+**Progress:** ✅ #1, #2, #3, #4, #5, #7, #9, #14, #16, #17 and #23–#27 are fixed.
 
 **Effort:** **S** = under 2 hours · **M** = half a day to a day · **L** = several days.
 
@@ -61,11 +61,11 @@ The findings below are what to fix next.
 ### Design and usability
 | # | Finding | One-line fix | Effort |
 |---|---|---|---|
-| 23 | **Several screens still have the old look:** sign-in (text "Spoor" instead of the wordmark), the trip form, Vehicle, Add a place, place details, route options and the map picker. They use 1–1.5 px borders, 8–12 px corners and white-on-cream fields, not the mockups' 2 px brown outlines, 14 px corners and rust buttons. | Make shared `Button`, `Input` and `Card` components from the mockup styles and use them on every screen. | M |
-| 24 | **Some touch targets are too small:** the trip form's move/remove buttons are 36×36 and the map filter chips are 36 high. "Refresh", "Move pin" and "Remove pin" are small text links that rely on `hitSlop`. | Make them at least 44 × 44 pt. | S |
-| 25 | **The Supplies tab is very long:** about 12 sections. Its loading spinner and "servers are busy" error are at the very bottom, so for 10–30 s the top shows nothing. | Show loading and errors at the top, and fold the detailed cards under "Show details". | S–M |
-| 26 | **Five of the nine main places are "Coming soon":** Community, Maps, Camps, Prep and Friends. Non-technical users will keep landing on dead ends. | Hide the unfinished tabs until they work, or give each a useful first version. | S |
-| 27 | **Adding a place is hard to find:** only by pressing and holding the map. | Add a visible "Add a place" button that opens the map picker. | S |
+| 23 | ✅ **Several screens still have the old look:** sign-in (text "Spoor" instead of the wordmark), the trip form, Vehicle, Add a place, place details, route options and the map picker. They use 1–1.5 px borders, 8–12 px corners and white-on-cream fields, not the mockups' 2 px brown outlines, 14 px corners and rust buttons. | Make shared `Button`, `Input` and `Card` components from the mockup styles and use them on every screen. | M |
+| 24 | ✅ **Some touch targets are too small:** the trip form's move/remove buttons are 36×36 and the map filter chips are 36 high. "Refresh", "Move pin" and "Remove pin" are small text links that rely on `hitSlop`. | Make them at least 44 × 44 pt. | S |
+| 25 | ✅ **The Supplies tab is very long:** about 12 sections. Its loading spinner and "servers are busy" error are at the very bottom, so for 10–30 s the top shows nothing. | Show loading and errors at the top, and fold the detailed cards under "Show details". | S–M |
+| 26 | ✅ **Five of the nine main places are "Coming soon":** Community, Maps, Camps, Prep and Friends. Non-technical users will keep landing on dead ends. | Hide the unfinished tabs until they work, or give each a useful first version. | S |
+| 27 | ✅ **Adding a place is hard to find:** only by pressing and holding the map. | Add a visible "Add a place" button that opens the map picker. | S |
 | 28 | **Water is nearly always amber.** OpenStreetMap has very few water points in southern Africa, so almost every route warns, and people learn to ignore it. | Count towns or fuel stations as places to buy water (setting or default). | S–M |
 | 29 | **Missing hints and states:** with no vehicle saved, the Trips card silently leaves out fuel; route options says "Use: Via A1"; messages mention "OpenRouteService" and "OpenStreetMap" to people who don't know what those are. | Add an "Add your vehicle" chip, and rewrite those messages in plain words ("Route planning is busy, try again later"). | S |
 | 30 | **Hard-coded colours** don't follow the theme or dark mode: water layer `#3E7CA6`, marker outline `#F3E7CF`, colours inside marker PNGs. | Move them into `Colors`. | S |

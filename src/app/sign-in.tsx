@@ -1,24 +1,21 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts, Spacing } from '@/constants/theme';
+import { Button, Input, MIN_TOUCH } from '@/components/ui';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 
 type Mode = 'sign-in' | 'sign-up';
+
+/** The wordmark's shape (720×220), shown 220 wide. */
+const WORDMARK_WIDTH = 220;
+const WORDMARK_HEIGHT = (WORDMARK_WIDTH * 220) / 720;
 
 /** Supabase's default minimum password length. */
 const MIN_PASSWORD_LENGTH = 6;
@@ -67,8 +64,6 @@ export default function SignInScreen() {
     setNotice(null);
   }
 
-  const inputStyle = [styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }];
-
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container}>
@@ -77,21 +72,24 @@ export default function SignInScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={styles.header}>
-              <ThemedText type="title" style={{ color: theme.accent }}>
-                Spoor
-              </ThemedText>
+              <Image
+                source={require('@/assets/brand/spoor-wordmark.png')}
+                style={{ width: WORDMARK_WIDTH, height: WORDMARK_HEIGHT }}
+                contentFit="contain"
+                accessible
+                accessibilityRole="header"
+                accessibilityLabel="Spoor"
+              />
               <ThemedText themeColor="textSecondary">
                 {isSignUp ? t('signIn.createIntro') : t('signIn.intro')}
               </ThemedText>
             </View>
 
             <View style={styles.fields}>
-              <TextInput
+              <Input
                 value={email}
                 onChangeText={setEmail}
                 placeholder={t('signIn.email')}
-                placeholderTextColor={theme.textSecondary}
-                style={inputStyle}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
@@ -100,12 +98,10 @@ export default function SignInScreen() {
                 returnKeyType="next"
                 accessibilityLabel={t('signIn.email')}
               />
-              <TextInput
+              <Input
                 value={password}
                 onChangeText={setPassword}
                 placeholder={isSignUp ? t('signIn.newPassword', { count: MIN_PASSWORD_LENGTH }) : t('signIn.password')}
-                placeholderTextColor={theme.textSecondary}
-                style={inputStyle}
                 secureTextEntry
                 autoCapitalize="none"
                 autoComplete={isSignUp ? 'new-password' : 'current-password'}
@@ -122,30 +118,18 @@ export default function SignInScreen() {
               </ThemedText>
             )}
             {notice && (
-              <ThemedText type="small" style={{ color: theme.accent }} accessibilityRole="alert">
+              <ThemedText type="small" style={{ color: theme.goodText }} accessibilityRole="alert">
                 {notice}
               </ThemedText>
             )}
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !canSubmit, busy }}
-              disabled={!canSubmit}
+            <Button
+              label={isSignUp ? t('signIn.createAccount') : t('signIn.signIn')}
               onPress={submit}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                { backgroundColor: theme.accent },
-                !canSubmit && styles.disabled,
-                pressed && styles.pressed,
-              ]}>
-              {busy ? (
-                <ActivityIndicator color={theme.background} />
-              ) : (
-                <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-                  {isSignUp ? t('signIn.createAccount') : t('signIn.signIn')}
-                </ThemedText>
-              )}
-            </Pressable>
+              disabled={!canSubmit && !busy}
+              busy={busy}
+              style={styles.submit}
+            />
 
             <Pressable
               accessibilityRole="button"
@@ -153,7 +137,7 @@ export default function SignInScreen() {
               style={({ pressed }) => [styles.switchButton, pressed && styles.pressed]}>
               <ThemedText type="small" themeColor="textSecondary">
                 {isSignUp ? t('signIn.haveAccount') : t('signIn.newHere')}{' '}
-                <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                <ThemedText type="smallBold" style={{ color: theme.link }}>
                   {isSignUp ? t('signIn.signIn') : t('signIn.createAnAccount')}
                 </ThemedText>
               </ThemedText>
@@ -183,28 +167,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.three,
   },
   fields: {
-    gap: Spacing.two,
+    gap: 10,
   },
-  input: {
-    fontSize: 16,
-    fontFamily: Fonts.sans,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two + Spacing.one,
-  },
-  primaryButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderRadius: Spacing.four,
+  submit: {
     marginTop: Spacing.two,
   },
   switchButton: {
     alignItems: 'center',
-    paddingVertical: Spacing.two,
-  },
-  disabled: {
-    opacity: 0.4,
+    justifyContent: 'center',
+    minHeight: MIN_TOUCH,
   },
   pressed: {
     opacity: 0.7,

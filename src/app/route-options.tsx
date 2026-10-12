@@ -1,12 +1,12 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RouteMap, type MapLine } from '@/components/route-map';
 import { SurfaceBar, SurfaceLegend } from '@/components/surface-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ActionBar, Button, Card, Chip, TextButton } from '@/components/ui';
 import { BorderWidth, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useT } from '@/lib/i18n';
@@ -22,7 +22,6 @@ function close() {
 export default function RouteOptionsScreen() {
   const theme = useTheme();
   const t = useT();
-  const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const params = useLocalSearchParams<{ tripId: string; leg: string }>();
   const trip = useTrip(params.tripId);
@@ -119,30 +118,18 @@ export default function RouteOptionsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {plan && plan.stops.length > 2 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.legChips}>
-            {plan.stops.slice(1).map((stop, index) => {
-              const selectedLeg = index === legIndex;
-              return (
-                <Pressable
-                  key={index}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: selectedLeg }}
-                  onPress={() => {
-                    setPicked(null);
-                    router.setParams({ leg: String(index) });
-                  }}
-                  style={({ pressed }) => [
-                    styles.legChip,
-                    selectedLeg
-                      ? { backgroundColor: theme.text, borderColor: theme.text }
-                      : { backgroundColor: theme.backgroundElement, borderColor: theme.borderSoft },
-                    pressed && styles.pressed,
-                  ]}>
-                  <ThemedText type="smallBold" style={{ color: selectedLeg ? theme.backgroundElement : theme.text }}>
-                    {t('routeOptions.fromTo', { from: plan.stops[index].name, to: stop.name })}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
+            {plan.stops.slice(1).map((stop, index) => (
+              <Chip
+                key={index}
+                role="button"
+                label={t('routeOptions.fromTo', { from: plan.stops[index].name, to: stop.name })}
+                selected={index === legIndex}
+                onPress={() => {
+                  setPicked(null);
+                  router.setParams({ leg: String(index) });
+                }}
+              />
+            ))}
           </ScrollView>
         ) : (
           <ThemedText type="small" themeColor="textSecondary">
@@ -150,7 +137,9 @@ export default function RouteOptionsScreen() {
           </ThemedText>
         )}
 
-        <RouteMap lines={lines} stops={[from, to]} style={{ height: Math.max(220, height * 0.32) }} />
+        <View style={[styles.mapFrame, { borderColor: theme.border, backgroundColor: theme.backgroundSelected }]}>
+          <RouteMap lines={lines} stops={[from, to]} style={{ height: Math.max(220, height * 0.32) }} />
+        </View>
 
         {options.status === 'loading' && (
           <View style={styles.row}>
@@ -162,12 +151,12 @@ export default function RouteOptionsScreen() {
         )}
 
         {options.status === 'error' && (
-          <ThemedView type="backgroundElement" style={styles.card}>
+          <Card>
             <ThemedText type="smallBold">{t('errors.routeOptions')}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary" accessibilityRole="alert">
               {options.message}
             </ThemedText>
-          </ThemedView>
+          </Card>
         )}
 
         {options.status === 'ready' && list.length === 1 && notes.length === 0 && (
@@ -193,43 +182,18 @@ export default function RouteOptionsScreen() {
 
         {list.length > 0 && <SurfaceLegend />}
 
-        {options.status !== 'loading' && options.status !== 'error' && (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setRefreshKey((key) => key + 1)}
-            style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              {t('routeOptions.lookAgain')}
-            </ThemedText>
-          </Pressable>
-        )}
-        {current && (
-          <Pressable
-            accessibilityRole="button"
-            onPress={useDefault}
-            style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              {t('routeOptions.useDefault')}
-            </ThemedText>
-          </Pressable>
-        )}
+        <View style={styles.textButtons}>
+          {options.status !== 'loading' && options.status !== 'error' && (
+            <TextButton label={t('routeOptions.lookAgain')} onPress={() => setRefreshKey((key) => key + 1)} />
+          )}
+          {current && <TextButton label={t('routeOptions.useDefault')} onPress={useDefault} />}
+        </View>
       </ScrollView>
 
       {choice && (
-        <View
-          style={[
-            styles.footer,
-            { paddingBottom: insets.bottom + Spacing.three, borderTopColor: theme.backgroundSelected },
-          ]}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={useChoice}
-            style={({ pressed }) => [styles.useButton, { backgroundColor: theme.accent }, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-              {useLabel}
-            </ThemedText>
-          </Pressable>
-        </View>
+        <ActionBar>
+          <Button label={useLabel} onPress={useChoice} style={styles.flex} />
+        </ActionBar>
       )}
     </ThemedView>
   );
@@ -256,7 +220,7 @@ function OptionCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.optionCard,
-        { backgroundColor: theme.backgroundElement, borderColor: selected ? theme.accent : 'transparent' },
+        { backgroundColor: theme.backgroundElement, borderColor: selected ? theme.accent : theme.borderSoft },
         pressed && styles.pressed,
       ]}>
       <View style={styles.optionHeader}>
@@ -297,6 +261,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  flex: {
+    flex: 1,
+  },
+  mapFrame: {
+    borderWidth: BorderWidth,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  textButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    columnGap: Spacing.four,
+  },
   centered: {
     flex: 1,
     alignItems: 'center',
@@ -305,7 +283,8 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: Spacing.three,
-    padding: Spacing.four,
+    paddingHorizontal: 20,
+    paddingVertical: Spacing.three,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
@@ -315,15 +294,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
-  card: {
-    gap: Spacing.two,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-  },
   optionCard: {
     gap: 12,
-    borderRadius: Spacing.three,
-    borderWidth: 2,
+    borderRadius: Radius.card,
+    borderWidth: BorderWidth,
     padding: Spacing.three,
   },
   optionHeader: {
@@ -353,30 +327,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  textButton: {
-    alignSelf: 'center',
-    paddingVertical: Spacing.two,
-  },
-  footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  useButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    borderRadius: 12,
-  },
   legChips: {
     gap: 6,
-  },
-  legChip: {
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: BorderWidth,
   },
   pressed: {
     opacity: 0.7,

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
 import MapView, { Marker, type Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Button, Chip, TextButton } from '@/components/ui';
+import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useT } from '@/lib/i18n';
 import type { LonLat } from '@/lib/route-math';
@@ -59,28 +60,12 @@ function PickerContent({ title, initial, near, onCancel, onPick }: Omit<Location
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onCancel}
-            hitSlop={Spacing.two}
-            style={({ pressed }) => pressed && styles.pressed}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              {t('common.cancel')}
-            </ThemedText>
-          </Pressable>
-          <ThemedText type="smallBold">{title}</ThemedText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !pin }}
-            disabled={!pin}
-            onPress={() => pin && onPick(pin)}
-            hitSlop={Spacing.two}
-            style={({ pressed }) => [!pin && styles.disabled, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              {t('picker.usePin')}
-            </ThemedText>
-          </Pressable>
+        <View style={[styles.header, { borderBottomColor: theme.border }]}>
+          <TextButton label={t('common.cancel')} onPress={onCancel} />
+          <ThemedText type="heading" style={styles.title} numberOfLines={1}>
+            {title}
+          </ThemedText>
+          <Button compact label={t('picker.usePin')} disabled={!pin} onPress={() => pin && onPick(pin)} />
         </View>
 
         <View style={styles.container}>
@@ -106,26 +91,19 @@ function PickerContent({ title, initial, near, onCancel, onPick }: Omit<Location
           </MapView>
 
           <View style={styles.overlay} pointerEvents="box-none">
-            <ThemedView type="backgroundElement" style={styles.hint}>
+            <ThemedView type="backgroundElement" style={[styles.hint, { borderColor: theme.border }]}>
               <ThemedText type="small">
                 {pin
                   ? t('picker.moveHint')
                   : t('picker.dropHint')}
               </ThemedText>
             </ThemedView>
-            <Pressable
-              accessibilityRole="switch"
-              accessibilityState={{ checked: satellite }}
+            <Chip
+              role="switch"
+              label={t('picker.satellite')}
+              selected={satellite}
               onPress={() => setSatellite((on) => !on)}
-              style={({ pressed }) => [
-                styles.toggle,
-                { backgroundColor: satellite ? theme.accent : theme.backgroundElement },
-                pressed && styles.pressed,
-              ]}>
-              <ThemedText type="smallBold" style={{ color: satellite ? theme.background : theme.text }}>
-                {t('picker.satellite')}
-              </ThemedText>
-            </Pressable>
+            />
           </View>
         </View>
       </SafeAreaView>
@@ -141,8 +119,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderBottomWidth: BorderWidth,
+  },
+  title: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
   overlay: {
     position: 'absolute',
@@ -156,19 +140,9 @@ const styles = StyleSheet.create({
   },
   hint: {
     flexShrink: 1,
-    borderRadius: Spacing.two,
+    borderRadius: Radius.card,
+    borderWidth: BorderWidth,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-  },
-  toggle: {
-    borderRadius: Spacing.four,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  disabled: {
-    opacity: 0.4,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BorderWidth, BottomTabInset, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Button } from '@/components/ui';
+import { BottomTabInset, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { setLanguageSetting, useLanguageSetting, useT, type LanguageSetting } from '@/lib/i18n';
@@ -145,14 +146,7 @@ export default function MeScreen() {
             </Row>
           </Section>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={signOut}
-            style={({ pressed }) => [styles.signOut, { borderColor: theme.danger }, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: theme.danger }}>
-              {t('me.signOut')}
-            </ThemedText>
-          </Pressable>
+          <Button variant="danger" label={t('me.signOut')} onPress={signOut} />
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -249,13 +243,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 48,
-  },
-  signOut: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-    borderWidth: BorderWidth,
-    borderRadius: Radius.card,
   },
   pressed: {
     opacity: 0.7,

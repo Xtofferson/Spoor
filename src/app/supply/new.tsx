@@ -3,22 +3,11 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-  type KeyboardTypeOptions,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
+import { ActionBar, Button, Chip, Field, FieldLabel, TextButton } from '@/components/ui';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useT } from '@/lib/i18n';
 import { addSupplyPoint, useSupplyCategories } from '@/lib/supplies';
@@ -36,7 +25,6 @@ function close() {
 export default function AddSupplyScreen() {
   const theme = useTheme();
   const t = useT();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ lat?: string; lon?: string; category?: string }>();
   const latitude = Number(params.lat);
   const longitude = Number(params.lon);
@@ -125,37 +113,27 @@ export default function AddSupplyScreen() {
         </ThemedText>
 
         <View style={styles.section}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {t('addPlace.whatIsIt')}
-          </ThemedText>
+          <FieldLabel>{t('addPlace.whatIsIt')}</FieldLabel>
           <View style={styles.chips} accessibilityRole="radiogroup">
-            {categories.map((category) => {
-              const selected = form.category === category.id;
-              return (
-                <Pressable
-                  key={category.id}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
-                  onPress={() => set('category')(category.id)}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    { backgroundColor: selected ? category.color : theme.backgroundElement },
-                    pressed && styles.pressed,
-                  ]}>
-                  <ThemedText type="smallBold" style={{ color: selected ? '#FFFFFF' : theme.text }}>
-                    {category.emoji} {categoryText(category, t).label}
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
+            {categories.map((category) => (
+              <Chip
+                key={category.id}
+                label={`${category.emoji} ${categoryText(category, t).label}`}
+                selected={form.category === category.id}
+                color={category.color}
+                onPress={() => set('category')(category.id)}
+              />
+            ))}
           </View>
-          {errors.category && <ErrorText text={errors.category} />}
+          {errors.category && (
+            <ThemedText type="small" style={{ color: theme.danger }} accessibilityRole="alert">
+              {errors.category}
+            </ThemedText>
+          )}
         </View>
 
         <View style={styles.section}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {t('addPlace.details')}
-          </ThemedText>
+          <ThemedText type="heading">{t('addPlace.details')}</ThemedText>
           <Field
             label={t('vehicle.name')}
             value={form.name}
@@ -189,132 +167,46 @@ export default function AddSupplyScreen() {
         </View>
 
         <View style={styles.section}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {t('addPlace.photo')}
-          </ThemedText>
+          <ThemedText type="heading">{t('addPlace.photo')}</ThemedText>
           {photo && (
             <View>
               <Image source={{ uri: photo }} style={styles.photo} contentFit="cover" accessibilityLabel={t('addPlace.photoLabel')} />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setPhoto(undefined)}
-                hitSlop={Spacing.two}
-                style={({ pressed }) => [styles.removePhoto, pressed && styles.pressed]}>
-                <ThemedText type="smallBold" style={{ color: theme.danger }}>
-                  {t('addPlace.removePhoto')}
-                </ThemedText>
-              </Pressable>
+              <View style={styles.removePhoto}>
+                <TextButton tone="danger" label={t('addPlace.removePhoto')} onPress={() => setPhoto(undefined)} />
+              </View>
             </View>
           )}
           <View style={styles.photoButtons}>
-            <OutlineButton label={t('addPlace.takePhoto')} onPress={() => pickPhoto('camera')} disabled={busy} />
-            <OutlineButton label={t('addPlace.choosePhoto')} onPress={() => pickPhoto('library')} disabled={busy} />
+            <Button
+              variant="outline"
+              compact
+              label={t('addPlace.takePhoto')}
+              onPress={() => pickPhoto('camera')}
+              disabled={busy}
+              style={styles.flex}
+            />
+            <Button
+              variant="outline"
+              compact
+              label={t('addPlace.choosePhoto')}
+              onPress={() => pickPhoto('library')}
+              disabled={busy}
+              style={styles.flex}
+            />
           </View>
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: insets.bottom + Spacing.three, borderTopColor: theme.backgroundSelected },
-        ]}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={close}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          <ThemedText type="smallBold" style={{ color: theme.accent }}>
-            {t('common.cancel')}
-          </ThemedText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !hasPlace || busy }}
+      <ActionBar>
+        <Button variant="outline" label={t('common.cancel')} onPress={close} style={styles.flex} />
+        <Button
+          label={busy ? t('addPlace.preparing') : t('addPlace.add')}
           onPress={save}
-          style={({ pressed }) => [
-            styles.button,
-            styles.primaryButton,
-            { backgroundColor: theme.accent },
-            (!hasPlace || busy) && styles.disabled,
-            pressed && styles.pressed,
-          ]}>
-          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-            {busy ? t('addPlace.preparing') : t('addPlace.add')}
-          </ThemedText>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
-  );
-}
-
-function ErrorText({ text }: { text: string }) {
-  const theme = useTheme();
-  return (
-    <ThemedText type="small" style={{ color: theme.danger }} accessibilityRole="alert">
-      {text}
-    </ThemedText>
-  );
-}
-
-function OutlineButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.outlineButton,
-        { borderColor: theme.accent },
-        disabled && styles.disabled,
-        pressed && styles.pressed,
-      ]}>
-      <ThemedText type="smallBold" style={{ color: theme.accent }}>
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  error,
-  keyboardType = 'default',
-  multiline,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  error?: string;
-  keyboardType?: KeyboardTypeOptions;
-  multiline?: boolean;
-}) {
-  const theme = useTheme();
-  return (
-    <View style={styles.field}>
-      <ThemedView
-        type="backgroundElement"
-        style={[styles.inputBox, multiline && styles.multilineBox, error && { borderColor: theme.danger }]}>
-        <ThemedText type="small" themeColor="textSecondary">
-          {label}
-        </ThemedText>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={theme.textSecondary}
-          keyboardType={keyboardType}
-          multiline={multiline}
-          style={[styles.input, multiline && styles.multilineInput, { color: theme.text }]}
-          accessibilityLabel={label}
+          disabled={!hasPlace || busy}
+          style={styles.flex}
         />
-      </ThemedView>
-      {error && <ErrorText text={error} />}
-    </View>
+      </ActionBar>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -330,45 +222,17 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   section: {
-    gap: Spacing.two,
+    gap: 12,
   },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
   },
-  chip: {
-    minHeight: 44,
-    justifyContent: 'center',
-    borderRadius: Spacing.four,
-    paddingHorizontal: Spacing.three,
-  },
-  field: {
-    gap: Spacing.one,
-  },
-  inputBox: {
-    borderRadius: Spacing.two,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
-  },
-  multilineBox: {
-    minHeight: 110,
-  },
-  input: {
-    fontSize: 16,
-    fontFamily: Fonts.sans,
-    paddingVertical: Spacing.two,
-  },
-  multilineInput: {
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
   photo: {
     width: '100%',
     aspectRatio: 4 / 3,
-    borderRadius: Spacing.three,
+    borderRadius: Radius.card,
   },
   removePhoto: {
     alignSelf: 'flex-start',
@@ -377,36 +241,5 @@ const styles = StyleSheet.create({
   photoButtons: {
     flexDirection: 'row',
     gap: Spacing.two,
-  },
-  outlineButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    borderWidth: 1.5,
-    borderRadius: 12,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: Spacing.two,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  button: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two + Spacing.one,
-    borderRadius: Spacing.four,
-  },
-  primaryButton: {
-    minWidth: 140,
-    alignItems: 'center',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

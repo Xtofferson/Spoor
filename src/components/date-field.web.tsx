@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts, Spacing } from '@/constants/theme';
+import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type DateFieldProps = {
@@ -21,7 +21,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
   const theme = useTheme();
 
   return (
-    <ThemedView type="backgroundElement" style={styles.field}>
+    <ThemedView type="backgroundElement" style={[styles.field, { borderColor: theme.border }]}>
       <ThemedText>{label}</ThemedText>
       {createElement('input', {
         type: 'date',
@@ -36,7 +36,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
         style: {
           fontFamily: Fonts.sans,
           fontSize: 16,
-          color: theme.accent,
+          color: theme.link,
           backgroundColor: 'transparent',
           accentColor: theme.accent,
           border: 'none',
@@ -52,7 +52,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.two,
-    borderRadius: Spacing.two,
+    minHeight: 52,
+    borderWidth: BorderWidth,
+    borderRadius: Radius.card,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },

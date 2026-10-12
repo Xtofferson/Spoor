@@ -1,11 +1,13 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Note } from '@/components/trip-tab';
+import { Button, Card, TextButton } from '@/components/ui';
+import { BorderWidth, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   currentSuppliesUser,
@@ -64,7 +66,7 @@ export default function SupplyPointScreen() {
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         {category && (
-          <View style={[styles.badge, { backgroundColor: category.color }]}>
+          <View style={[styles.badge, { backgroundColor: category.color, borderColor: theme.border }]}>
             <ThemedText style={styles.badgeText}>{category.emoji}</ThemedText>
           </View>
         )}
@@ -77,11 +79,7 @@ export default function SupplyPointScreen() {
       </View>
 
       {text?.routeWarning && (
-        <View style={[styles.warning, { backgroundColor: theme.dangerBackground }]}>
-          <ThemedText type="small" style={{ color: theme.dangerText }}>
-            {text.routeWarning}
-          </ThemedText>
-        </View>
+        <Note tone="danger">{text.routeWarning}</Note>
       )}
 
       {photo && (
@@ -94,15 +92,16 @@ export default function SupplyPointScreen() {
         />
       )}
 
-      <ThemedView type="backgroundElement" style={styles.card}>
+      <Card style={styles.card}>
         {point.phone && (
           <Row label={t('place.phone')}>
-            <Pressable
-              accessibilityRole="link"
-              onPress={() => Linking.openURL(`tel:${point.phone!.replace(/[^\d+]/g, '')}`)}
-              hitSlop={Spacing.two}>
-              <ThemedText style={{ color: theme.accent }}>{point.phone}</ThemedText>
-            </Pressable>
+            <View style={styles.start}>
+              <TextButton
+                label={point.phone}
+                accessibilityLabel={t('place.call', { phone: point.phone })}
+                onPress={() => Linking.openURL(`tel:${point.phone!.replace(/[^\d+]/g, '')}`)}
+              />
+            </View>
           </Row>
         )}
         {point.openingHours && (
@@ -129,18 +128,15 @@ export default function SupplyPointScreen() {
             {point.coordinates[1].toFixed(5)}, {point.coordinates[0].toFixed(5)}
           </ThemedText>
         </Row>
-      </ThemedView>
+      </Card>
 
       {mine && (
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          variant="danger"
+          label={deleting ? t('place.deleting') : t('place.delete')}
           disabled={deleting}
           onPress={confirmDelete}
-          style={({ pressed }) => [styles.delete, { borderColor: theme.danger }, pressed && styles.pressed]}>
-          <ThemedText type="smallBold" style={{ color: theme.danger }}>
-            {deleting ? t('place.deleting') : t('place.delete')}
-          </ThemedText>
-        </Pressable>
+        />
       )}
     </ScrollView>
   );
@@ -174,9 +170,10 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   badge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: Radius.pill,
+    borderWidth: BorderWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -184,35 +181,21 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
   },
-  warning: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: Spacing.two,
-  },
   photo: {
     width: '100%',
     aspectRatio: 4 / 3,
-    borderRadius: Spacing.three,
+    borderRadius: Radius.card,
   },
   card: {
     gap: Spacing.three,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
+  },
+  start: {
+    alignItems: 'flex-start',
   },
   row: {
     gap: 2,
   },
   mono: {
     fontFamily: Fonts.mono,
-  },
-  delete: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    borderWidth: 1.5,
-    borderRadius: 12,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

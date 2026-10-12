@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -10,16 +9,14 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateField } from '@/components/date-field';
 import { canPickOnMap, LocationPicker } from '@/components/location-picker';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
+import { ActionBar, Button, Card, Field, IconButton, Input, MIN_TOUCH, TextButton } from '@/components/ui';
+import { BorderWidth, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { usePlaceSuggestions } from '@/lib/place-search';
 import type { LonLat, PlaceCandidate } from '@/lib/route-math';
@@ -99,7 +96,6 @@ function close() {
 export function TripForm({ trip }: { trip?: Trip }) {
   const theme = useTheme();
   const t = useT();
-  const insets = useSafeAreaInsets();
   // Name used for a stop that was pinned on the map but couldn't be named, e.g. while offline.
   const pinnedName = t('tripForm.pinnedName');
   const [name, setName] = useState(trip?.name ?? '');
@@ -213,11 +209,6 @@ export function TripForm({ trip }: { trip?: Trip }) {
 
   const days = tripDays(startDate, endDate);
 
-  const inputStyle = [
-    styles.input,
-    { color: theme.text, backgroundColor: theme.backgroundElement },
-  ];
-
   return (
     <KeyboardAvoidingView
       style={[styles.flex, { backgroundColor: theme.background }]}
@@ -226,28 +217,19 @@ export function TripForm({ trip }: { trip?: Trip }) {
         style={styles.flex}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled">
-        <View style={styles.section}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {t('tripForm.name')}
-          </ThemedText>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder={t('tripForm.namePlaceholder')}
-            placeholderTextColor={theme.textSecondary}
-            style={inputStyle}
-            autoFocus={!trip}
-            returnKeyType="next"
-            accessibilityLabel={t('tripForm.name')}
-          />
-        </View>
+        <Field
+          label={t('tripForm.name')}
+          value={name}
+          onChangeText={setName}
+          placeholder={t('tripForm.namePlaceholder')}
+          autoFocus={!trip}
+          returnKeyType="next"
+        />
 
         <View style={styles.section}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {t('tripForm.people')}
-          </ThemedText>
-          <ThemedView type="backgroundElement" style={styles.peopleRow}>
-            <ThemedText>{t('tripForm.peopleHint')}</ThemedText>
+          <ThemedText type="heading">{t('tripForm.people')}</ThemedText>
+          <Card style={styles.peopleRow}>
+            <ThemedText style={styles.flex}>{t('tripForm.peopleHint')}</ThemedText>
             <View
               style={styles.stepper}
               accessibilityRole="adjustable"
@@ -269,35 +251,24 @@ export function TripForm({ trip }: { trip?: Trip }) {
                 onPress={() => changePeople(1)}
               />
             </View>
-          </ThemedView>
+          </Card>
         </View>
 
         <View style={styles.section}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {t('tripForm.route', { days: t('trips.days', { count: days }) })}
-          </ThemedText>
+          <ThemedText type="heading">{t('tripForm.route', { days: t('trips.days', { count: days }) })}</ThemedText>
           {stops.map((stop, index) => {
             const label = stopLabel(index, stops.length, t);
             const isStart = index === 0;
             const isEnd = index === stops.length - 1;
             return (
-              <ThemedView key={stop.id} type="backgroundElement" style={styles.stopCard}>
+              <Card key={stop.id} style={styles.stopCard}>
                 <View style={styles.stopRow}>
-                  <View style={[styles.stopMarker, { backgroundColor: theme.accent }]}>
-                    <ThemedText type="smallBold" style={{ color: theme.backgroundElement }}>
+                  <View style={[styles.stopMarker, { backgroundColor: theme.accent, borderColor: theme.border }]}>
+                    <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
                       {isStart ? 'A' : isEnd ? 'B' : index}
                     </ThemedText>
                   </View>
-                  <TextInput
-                    value={stop.name}
-                    onChangeText={(value) => renameStop(stop, value)}
-                    onBlur={() => setSearchingId((current) => (current === stop.id ? null : current))}
-                    autoCorrect={false}
-                    placeholder={stop.coordinates ? pinnedName : label}
-                    placeholderTextColor={theme.textSecondary}
-                    style={[styles.stopInput, { color: theme.text }]}
-                    accessibilityLabel={label}
-                  />
+                  <ThemedText style={styles.stopLabel}>{label}</ThemedText>
                   <IconButton
                     icon={{ ios: 'chevron.up', android: 'keyboard_arrow_up', web: 'keyboard_arrow_up' }}
                     label={t('tripForm.moveUp', { stop: label })}
@@ -314,14 +285,26 @@ export function TripForm({ trip }: { trip?: Trip }) {
                     disabled={isEnd}
                     onPress={() => moveStop(index, 1)}
                   />
-                  <IconButton
-                    icon={{ ios: 'xmark', android: 'close', web: 'close' }}
-                    label={t('tripForm.remove', { stop: label })}
-                    // A trip always keeps a start and an end.
-                    hidden={stops.length <= 2}
-                    onPress={() => removeStop(stop.id)}
-                  />
+                  {/* A trip always keeps a start and an end. */}
+                  {stops.length > 2 ? (
+                    <IconButton
+                      icon={{ ios: 'xmark', android: 'close', web: 'close' }}
+                      label={t('tripForm.remove', { stop: label })}
+                      onPress={() => removeStop(stop.id)}
+                    />
+                  ) : (
+                    <View style={styles.iconSpace} />
+                  )}
                 </View>
+
+                <Input
+                  value={stop.name}
+                  onChangeText={(value) => renameStop(stop, value)}
+                  onBlur={() => setSearchingId((current) => (current === stop.id ? null : current))}
+                  autoCorrect={false}
+                  placeholder={stop.coordinates ? pinnedName : t('tripForm.placePlaceholder')}
+                  accessibilityLabel={label}
+                />
 
                 {searchingId === stop.id && (
                   <StopSuggestions
@@ -335,8 +318,8 @@ export function TripForm({ trip }: { trip?: Trip }) {
                   <View style={styles.stopLocation}>
                     {stop.coordinates ? (
                       <>
-                        <ThemedText type="small" style={[styles.locationText, { color: theme.accent }]}>
-                          {stop.placeLabel ?? t('routeOptions.pinned')}
+                        <ThemedText type="small" themeColor="textSecondary" style={styles.locationText}>
+                          📍 {stop.placeLabel ?? t('routeOptions.pinned')}
                         </ThemedText>
                         {canPickOnMap && (
                           <TextButton label={t('tripForm.movePin')} onPress={() => setPickingId(stop.id)} />
@@ -375,65 +358,35 @@ export function TripForm({ trip }: { trip?: Trip }) {
                     />
                   )}
                 </View>
-              </ThemedView>
+              </Card>
             );
           })}
           <Pressable
             accessibilityRole="button"
             onPress={addStop}
-            style={({ pressed }) => [
-              styles.addStop,
-              { borderColor: theme.accent },
-              pressed && styles.pressed,
-            ]}>
-            <ThemedText type="smallBold" style={{ color: theme.accent }}>
-              {t('tripForm.addStop')}
-            </ThemedText>
+            style={({ pressed }) => [styles.addStop, { borderColor: theme.borderDashed }, pressed && styles.pressed]}>
+            <ThemedText style={styles.addStopText}>{t('tripForm.addStop')}</ThemedText>
           </Pressable>
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: insets.bottom + Spacing.three, borderTopColor: theme.backgroundSelected },
-        ]}>
+      <ActionBar>
         {trip && (
-          <Pressable
-            accessibilityRole="button"
+          <TextButton
+            tone="danger"
+            label={t('common.delete')}
             accessibilityLabel={t('tripForm.deleteTrip')}
             onPress={remove}
-            style={({ pressed }) => [styles.button, styles.deleteButton, pressed && styles.pressed]}>
-            <ThemedText type="smallBold" style={{ color: theme.danger }}>
-              {t('common.delete')}
-            </ThemedText>
-          </Pressable>
+          />
         )}
-        <Pressable
-          accessibilityRole="button"
-          onPress={close}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          <ThemedText type="smallBold" style={{ color: theme.accent }}>
-            {t('common.cancel')}
-          </ThemedText>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canSave }}
+        <Button variant="outline" label={t('common.cancel')} onPress={close} style={styles.flex} />
+        <Button
+          label={trip ? t('tripForm.saveChanges') : t('tripForm.saveTrip')}
           disabled={!canSave}
           onPress={save}
-          style={({ pressed }) => [
-            styles.button,
-            styles.primaryButton,
-            { backgroundColor: theme.accent },
-            !canSave && styles.disabled,
-            pressed && styles.pressed,
-          ]}>
-          <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-            {trip ? t('tripForm.saveChanges') : t('tripForm.saveTrip')}
-          </ThemedText>
-        </Pressable>
-      </View>
+          style={styles.save}
+        />
+      </ActionBar>
 
       <LocationPicker
         visible={pickingIndex !== -1}
@@ -535,64 +488,13 @@ function StepButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.stepButton,
-        { borderColor: theme.accent },
+        { borderColor: theme.border, backgroundColor: theme.background },
         disabled && styles.disabled,
         pressed && styles.pressed,
       ]}>
-      <ThemedText type="smallBold" style={{ color: theme.accent, fontSize: 20 }}>
+      <ThemedText style={styles.stepLabel}>
         {label}
       </ThemedText>
-    </Pressable>
-  );
-}
-
-function TextButton({
-  label,
-  accessibilityLabel,
-  onPress,
-}: {
-  label: string;
-  accessibilityLabel?: string;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? label}
-      onPress={onPress}
-      hitSlop={Spacing.two}
-      style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedText type="smallBold" style={{ color: theme.accent }}>
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-type IconButtonProps = {
-  icon: SymbolViewProps['name'];
-  label: string;
-  disabled?: boolean;
-  hidden?: boolean;
-  onPress: () => void;
-};
-
-function IconButton({ icon, label, disabled, hidden, onPress }: IconButtonProps) {
-  const theme = useTheme();
-
-  if (hidden) return <View style={styles.iconButton} />;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      hitSlop={Spacing.one}
-      style={({ pressed }) => [styles.iconButton, (pressed || disabled) && styles.disabled]}>
-      <SymbolView name={icon} size={18} tintColor={theme.textSecondary} />
     </Pressable>
   );
 }
@@ -611,12 +513,8 @@ const styles = StyleSheet.create({
   peopleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    borderRadius: Spacing.two,
-    paddingLeft: Spacing.three,
-    paddingRight: Spacing.two,
-    paddingVertical: Spacing.one,
+    paddingVertical: 10,
+    paddingRight: 10,
   },
   stepper: {
     flexDirection: 'row',
@@ -624,12 +522,17 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   stepButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
+    width: 48,
+    height: 48,
+    borderRadius: Radius.pill,
+    borderWidth: BorderWidth,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepLabel: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: 600,
   },
   peopleCount: {
     minWidth: 28,
@@ -638,30 +541,26 @@ const styles = StyleSheet.create({
     fontWeight: 600,
   },
   section: {
-    gap: Spacing.two,
-  },
-  input: {
-    fontSize: 16,
-    fontFamily: Fonts.sans,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two + Spacing.one,
+    gap: 12,
   },
   stopCard: {
-    borderRadius: Spacing.two,
-    paddingLeft: Spacing.two,
-    paddingRight: Spacing.one,
-    paddingBottom: Spacing.two,
+    gap: 10,
+    paddingTop: Spacing.two,
   },
   stopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.one,
+    gap: Spacing.two,
+  },
+  stopLabel: {
+    flex: 1,
+    fontWeight: 600,
+  },
+  iconSpace: {
+    width: MIN_TOUCH,
   },
   suggestions: {
-    marginLeft: Spacing.four + Spacing.two,
-    marginRight: Spacing.two,
-    marginBottom: Spacing.two,
+    marginHorizontal: Spacing.one,
   },
   suggestion: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -680,65 +579,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: Spacing.three,
-    // Line up with the stop name, just right of the marker.
-    paddingLeft: Spacing.four + Spacing.two,
-    paddingBottom: Spacing.two,
+    columnGap: Spacing.three,
   },
   stopDates: {
-    gap: Spacing.one,
-    // Line up with the stop name, just right of the marker.
-    paddingLeft: Spacing.four + Spacing.two,
-    paddingRight: Spacing.two,
+    gap: Spacing.two,
   },
   stopMarker: {
-    width: Spacing.four,
-    height: Spacing.four,
-    borderRadius: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopInput: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: Fonts.sans,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.two + Spacing.one,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
+    borderRadius: Radius.pill,
+    borderWidth: BorderWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addStop: {
     alignItems: 'center',
-    borderRadius: Spacing.two,
-    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: BorderWidth,
     borderStyle: 'dashed',
-    paddingVertical: Spacing.two + Spacing.one,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: Spacing.two,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
+  addStopText: {
+    fontSize: 17,
+    fontWeight: 600,
   },
-  button: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two + Spacing.one,
-    borderRadius: Spacing.four,
-  },
-  deleteButton: {
-    // Keeps Delete on the left, away from Save.
-    marginRight: 'auto',
-    paddingHorizontal: 0,
-  },
-  primaryButton: {
-    minWidth: 140,
-    alignItems: 'center',
+  save: {
+    flex: 1.4,
   },
   disabled: {
     opacity: 0.4,

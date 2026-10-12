@@ -6,7 +6,8 @@ import { RouteMap, type MapLine } from '@/components/route-map';
 import { SurfaceBar, SurfaceLegend } from '@/components/surface-bar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Note, OutlineButton, RouteStatus, TripTabScreen } from '@/components/trip-tab';
+import { Note, RouteStatus, TripTabScreen } from '@/components/trip-tab';
+import { Button } from '@/components/ui';
 import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { legFuelLitres, stretchAdvice } from '@/lib/fuel';
@@ -85,7 +86,7 @@ export default function RouteTab() {
             </Pressable>
           ))}
 
-          <OutlineButton label={t('route.compare')} onPress={() => compare(0)} />
+          <Button variant="outline" label={t('route.compare')} onPress={() => compare(0)} />
 
           <ThemedText type="small" themeColor="textSecondary">
             {t('route.drivingTimeTotal', { time: formatDuration(route.duration) })} {t('route.drivingTimeNote')}

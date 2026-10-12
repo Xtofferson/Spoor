@@ -267,6 +267,8 @@ export type FuelStopRow = {
   afterStopKm: number;
   /** The last place you fill up before this stop: the start, or the last planned stop. */
   since: string;
+  /** Whether `since` is the trip's start (you leave with full tanks) rather than a fuel stop. */
+  sinceStart: boolean;
   sinceKm: number;
   /** Share of the safe range used to get here from `since`, when the vehicle is known. */
   sinceShare?: number;
@@ -286,6 +288,7 @@ export function fuelStopRows(
   const usable = vehicle ? usableLitres(vehicle) : 0;
   const tripStops = tripStopsAlong(line);
   let since = line.legs[0]?.from ?? '';
+  let sinceStart = true;
   let sinceKm = 0;
   return stops.map((stop) => {
     const destination = tripStops.filter((tripStop) => tripStop.km <= stop.startKm).pop() ?? tripStops[0];
@@ -296,12 +299,14 @@ export function fuelStopRows(
       afterStop: destination?.name ?? '',
       afterStopKm: Math.max(0, stop.startKm - (destination?.km ?? 0)),
       since,
+      sinceStart,
       sinceKm: Math.max(0, stop.startKm - sinceKm),
       sinceShare:
         vehicle && usable > 0 ? litresBetween(line, sinceKm, stop.startKm, vehicle.consumption) / usable : undefined,
     };
     if (planned.has(stop)) {
       since = stop.label;
+      sinceStart = false;
       sinceKm = stop.endKm;
     }
     return row;

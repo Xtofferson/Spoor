@@ -99,7 +99,10 @@
     "tickTowns": "Merk die dorpe waar jy gaan volmaak. Tot jy dit doen, word elke plek met brandstof getel.",
     "atPlace": "By {{place}}",
     "kmFrom": "{{km}} km van {{place}}",
-    "fillHere": "Maak hier vol"
+    "fillHere": "Maak hier vol",
+    "sinceStart": "{{km}} km sedert jy {{place}} verlaat",
+    "sinceFill": "{{km}} km sedert jy by {{place}} volgemaak het",
+    "ofRange": "{{percent}}% van jou veilige reikafstand"
   },
   "water": {
     "kind": {
@@ -174,7 +177,7 @@
     "fromOsm": "Van OpenStreetMap",
     "addedByTraveller": "Deur ’n reisiger bygevoeg",
     "tapForDetails": "Tik vir besonderhede",
-    "longPressHint": "Druk en hou die kaart om ’n plek by te voeg, soos ’n houtverkoper langs die pad of ’n kontrolepunt.",
+    "longPressHint": "Ken jy ’n slaghuis, houtverkoper of kontrolepunt wat ontbreek? Voeg dit vir almal by.",
     "alongTheWay": "Slaghuise, brandhout en kontrolepunte",
     "nextAfter": "Volgende {{noun}} daarna: {{place}}, {{km}} km verder.",
     "noneAfter": "Daar is geen {{noun}} daarna op hierdie roete nie.",
@@ -206,7 +209,11 @@
     "gapNote": "{{title}}: {{from}}",
     "waterNote": "Water: neem genoeg vir {{days}} sonder ’n waterpunt ({{people}} × {{perDay}} liter × {{days}} = {{litres}} liter)",
     "checkingAreas": "Gaan die roete na vir brandstof, water en voorrade… deel {{done}} van {{total}}",
-    "incomplete": "OpenStreetMap was besig, so ’n deel van die roete is nog nie nagegaan nie en party plekke kan ontbreek. Tik Laai weer oor ’n paar minute."
+    "incomplete": "OpenStreetMap was besig, so ’n deel van die roete is nog nie nagegaan nie en party plekke kan ontbreek. Tik Laai weer oor ’n paar minute.",
+    "layerOnMap": "{{label}} op die kaart",
+    "addPlace": "Voeg ’n plek by",
+    "showDetails": "Wys brandstof- en waterbesonderhede",
+    "hideDetails": "Steek brandstof- en waterbesonderhede weg"
   },
   "common": {
     "cancel": "Kanselleer",
@@ -262,7 +269,8 @@
     "notFound": "Hierdie reis is nie meer op jou foon nie. Dit is dalk uitgevee.",
     "editLabel": "Wysig {{name}}",
     "back": "Terug na reise",
-    "sections": "Reis-afdelings"
+    "sections": "Reis-afdelings",
+    "shareLabel": "Deel {{name}}"
   },
   "route": {
     "needsStops": "Gee hierdie reis ’n begin en ’n einde om die roete te sien. Tik op die potlood bo-aan.",
@@ -285,21 +293,58 @@
   },
   "camps": {
     "about": "Vind en stoor slaapplekke langs jou roete: kampeerplekke, herberge en boskampe.",
-    "book": "Bespreek"
+    "book": "Bespreek",
+    "night": "Nag {{number}}",
+    "nights": "Nagte {{first}}–{{last}}",
+    "noNights": "Dit is ’n dagrit, so daar is geen nagte om te beplan nie. Voeg ’n einddatum by om te beplan waar julle slaap.",
+    "unplanned": "Nog nie beplan nie",
+    "onTheWay": "op pad na {{place}}",
+    "addStopsHint": "Voeg ’n stop by met datums waar julle slaap, en dit wys hier.",
+    "editStops": "Verander stops en datums",
+    "comingSoon": "Kom binnekort: vind kampplekke naby elke stop, met graderings, en bespreek hulle."
   },
   "prep": {
-    "about": "Kontrolelyste om jou en die voertuig gereed te kry: permitte, onderdele, kos en toerusting."
+    "about": "Kontrolelyste om jou en die voertuig gereed te kry: permitte, onderdele, kos en toerusting.",
+    "items": {
+      "papers": "Paspoorte en voertuigpapiere",
+      "tyres": "Bande nagegaan, spaarwiel",
+      "recovery": "Herwinningstoerusting",
+      "water": "{{litres}} liter water",
+      "firstAid": "Noodhulpkissie",
+      "spares": "Onderdele en gereedskap"
+    },
+    "progress": "{{done}} van {{total}} klaar",
+    "addPlaceholder": "Voeg jou eie by, bv. Braairooster",
+    "addLabel": "Nuwe item vir die lys",
+    "add": "Voeg by",
+    "remove": "Verwyder {{item}}",
+    "savedHere": "Jou lys word op hierdie foon gestoor."
   },
   "friends": {
     "about": "Deel hierdie reis met die mense wat saam met jou reis, sodat almal dieselfde plan sien.",
-    "whatsapp": "Deel op WhatsApp"
+    "whatsapp": "Deel op WhatsApp",
+    "you": "Jy",
+    "youLead": "Jy (reisleier)",
+    "youNamed": "{{name}} (reisleier)",
+    "people": {
+      "one": "{{count}} persoon op hierdie reis",
+      "other": "{{count}} mense op hierdie reis"
+    },
+    "shareOther": "Deel op ’n ander manier",
+    "changePeople": "Verander hoeveel mense",
+    "fuelAt": "Brandstof by: {{places}}",
+    "plannedWith": "Beplan met Spoor",
+    "comingSoon": "Kom binnekort: nooi vriende sodat almal dieselfde plan sien en kan byvoeg."
   },
   "community": {
-    "about": "Wenke, padverslae en plekke wat deur ander oorlandreisigers gedeel is."
+    "about": "Wenke, padverslae en plekke wat deur ander oorlandreisigers gedeel is.",
+    "meanwhile": "Jy kan reeds plekke met ander reisigers deel, soos ’n slaghuis, houtverkoper of kontrolepunt."
   },
   "maps": {
     "title": "Vanlyn-kaarte",
-    "about": "Laai kaarte vir jou reis af sodat jy sonder sein jou pad kan vind."
+    "about": "Laai kaarte vir jou reis af sodat jy sonder sein jou pad kan vind.",
+    "meanwhile": "’n Reis se roete, brandstof- en waterpunte word op jou foon gehou sodra jy dit oopgemaak het, so hulle wys steeds sonder sein. Die kaart self het vir eers sein nodig.",
+    "openTrips": "Maak my reise oop"
   },
   "me": {
     "profile": "Profiel",
@@ -354,7 +399,8 @@
     "saveTrip": "Stoor reis",
     "searching": "Soek tans…",
     "noMatches": "Geen resultate nie. Probeer die land byvoeg, bv. “Nata, Botswana”, of gebruik Kies op kaart.",
-    "notListed": "Nie gelys nie? Voeg die land by, bv. “Nata, Botswana”."
+    "notListed": "Nie gelys nie? Voeg die land by, bv. “Nata, Botswana”.",
+    "placePlaceholder": "Dorp, kampplek of plek"
   },
   "addPlace": {
     "noCamera": "Geen toegang tot kamera nie",
@@ -363,7 +409,7 @@
     "photoFailed": "Kon nie daardie foto gebruik nie",
     "photoFailedHint": "Probeer ’n ander een.",
     "intro": "By {{position}}. Gedeel met almal wat Spoor gebruik; dit word op jou foon gestoor en opgelaai wanneer jy aanlyn is.",
-    "noPosition": "Druk en hou die kaart op ’n reis se Voorrade-oortjie waar die plek is om dit by te voeg.",
+    "noPosition": "Kies eers waar die plek is: tik “Voeg ’n plek by” op ’n reis se Voorrade-oortjie.",
     "whatIsIt": "Wat is dit?",
     "details": "Besonderhede",
     "namePlaceholder": "bv. Houtverkoper langs die pad",
@@ -395,7 +441,8 @@
     "notKnown": "Onbekend",
     "location": "Ligging",
     "deleting": "Vee tans uit…",
-    "delete": "Vee hierdie plek uit"
+    "delete": "Vee hierdie plek uit",
+    "call": "Bel {{phone}}"
   },
   "signIn": {
     "checkEmail": "Kyk in jou e-pos en tik op die bevestigingskakel, en meld dan hier aan.",

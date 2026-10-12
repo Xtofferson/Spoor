@@ -99,7 +99,10 @@
     "tickTowns": "Tick the towns you’ll fill up at. Until you do, every place with fuel is counted.",
     "atPlace": "At {{place}}",
     "kmFrom": "{{km}} km from {{place}}",
-    "fillHere": "Fill up here"
+    "fillHere": "Fill up here",
+    "sinceStart": "{{km}} km since leaving {{place}}",
+    "sinceFill": "{{km}} km since filling up at {{place}}",
+    "ofRange": "{{percent}}% of your safe range"
   },
   "water": {
     "kind": {
@@ -174,7 +177,7 @@
     "fromOsm": "From OpenStreetMap",
     "addedByTraveller": "Added by a traveller",
     "tapForDetails": "Tap for details",
-    "longPressHint": "Press and hold the map to add a place, like a roadside wood seller or a checkpoint.",
+    "longPressHint": "Know of a butchery, firewood seller or checkpoint that’s missing? Add it for everyone.",
     "alongTheWay": "Butcheries, firewood and checkpoints",
     "nextAfter": "Next {{noun}} after it: {{place}}, {{km}} km on.",
     "noneAfter": "There’s no {{noun}} after it on this route.",
@@ -206,7 +209,11 @@
     "gapNote": "{{title}}: {{from}}",
     "waterNote": "Water: carry enough for {{days}} without a water point ({{people}} × {{perDay}} litres × {{days}} = {{litres}} litres)",
     "checkingAreas": "Checking the route for fuel, water and supplies… part {{done}} of {{total}}",
-    "incomplete": "OpenStreetMap was busy, so part of the route hasn’t been checked yet and some places may be missing. Tap Refresh in a few minutes."
+    "incomplete": "OpenStreetMap was busy, so part of the route hasn’t been checked yet and some places may be missing. Tap Refresh in a few minutes.",
+    "layerOnMap": "{{label}} on the map",
+    "addPlace": "Add a place",
+    "showDetails": "Show fuel and water details",
+    "hideDetails": "Hide fuel and water details"
   },
   "common": {
     "cancel": "Cancel",
@@ -262,7 +269,8 @@
     "notFound": "This trip isn’t on your phone any more. It may have been deleted.",
     "editLabel": "Edit {{name}}",
     "back": "Back to trips",
-    "sections": "Trip sections"
+    "sections": "Trip sections",
+    "shareLabel": "Share {{name}}"
   },
   "route": {
     "needsStops": "Give this trip a start and an end to see the route. Tap the pencil at the top.",
@@ -285,21 +293,58 @@
   },
   "camps": {
     "about": "Find and save places to sleep along your route: campsites, lodges and bush camps.",
-    "book": "Book"
+    "book": "Book",
+    "night": "Night {{number}}",
+    "nights": "Nights {{first}}–{{last}}",
+    "noNights": "This is a day trip, so there are no nights to plan. Add an end date to plan where you’ll sleep.",
+    "unplanned": "Not planned yet",
+    "onTheWay": "on the way to {{place}}",
+    "addStopsHint": "Add a stop with dates where you’ll sleep, and it shows here.",
+    "editStops": "Change stops and dates",
+    "comingSoon": "Coming soon: find campsites near each stop, with ratings, and book them."
   },
   "prep": {
-    "about": "Checklists to get you and the vehicle ready: permits, spares, food and kit."
+    "about": "Checklists to get you and the vehicle ready: permits, spares, food and kit.",
+    "items": {
+      "papers": "Passports and vehicle papers",
+      "tyres": "Tyres checked, spare wheel",
+      "recovery": "Recovery kit",
+      "water": "{{litres}} litres of water",
+      "firstAid": "First-aid kit",
+      "spares": "Spares and tools"
+    },
+    "progress": "{{done}} of {{total}} done",
+    "addPlaceholder": "Add your own, e.g. Braai grid",
+    "addLabel": "New item for the checklist",
+    "add": "Add",
+    "remove": "Remove {{item}}",
+    "savedHere": "Your checklist is saved on this phone."
   },
   "friends": {
     "about": "Share this trip with the people travelling with you, so everyone sees the same plan.",
-    "whatsapp": "Share on WhatsApp"
+    "whatsapp": "Share on WhatsApp",
+    "you": "You",
+    "youLead": "You (trip lead)",
+    "youNamed": "{{name}} (trip lead)",
+    "people": {
+      "one": "{{count}} person on this trip",
+      "other": "{{count}} people on this trip"
+    },
+    "shareOther": "Share another way",
+    "changePeople": "Change how many people",
+    "fuelAt": "Fuel at: {{places}}",
+    "plannedWith": "Planned with Spoor",
+    "comingSoon": "Coming soon: invite friends so everyone sees the same plan and can add to it."
   },
   "community": {
-    "about": "Tips, road reports and places shared by other overlanders."
+    "about": "Tips, road reports and places shared by other overlanders.",
+    "meanwhile": "You can already share places with other travellers, like a butchery, firewood seller or checkpoint."
   },
   "maps": {
     "title": "Offline maps",
-    "about": "Download maps for your trip so you can find your way without signal."
+    "about": "Download maps for your trip so you can find your way without signal.",
+    "meanwhile": "A trip’s route, fuel and water stops are kept on your phone once you’ve opened it, so they still show without signal. The map itself needs signal for now.",
+    "openTrips": "Open my trips"
   },
   "me": {
     "profile": "Profile",
@@ -354,7 +399,8 @@
     "saveTrip": "Save trip",
     "searching": "Searching…",
     "noMatches": "No matches. Try adding the country, e.g. “Nata, Botswana”, or use Pick on map.",
-    "notListed": "Not listed? Add the country, e.g. “Nata, Botswana”."
+    "notListed": "Not listed? Add the country, e.g. “Nata, Botswana”.",
+    "placePlaceholder": "Town, campsite or place"
   },
   "addPlace": {
     "noCamera": "No camera access",
@@ -363,7 +409,7 @@
     "photoFailed": "Couldn’t use that photo",
     "photoFailedHint": "Try another one.",
     "intro": "At {{position}}. Shared with everyone using Spoor; it’s saved on your phone and uploaded when you’re online.",
-    "noPosition": "Press and hold the map on a trip’s Supplies tab where the place is to add it.",
+    "noPosition": "Choose where the place is first: tap “Add a place” on a trip’s Supplies tab.",
     "whatIsIt": "What is it?",
     "details": "Details",
     "namePlaceholder": "e.g. Roadside wood seller",
@@ -395,7 +441,8 @@
     "notKnown": "Not known",
     "location": "Location",
     "deleting": "Deleting…",
-    "delete": "Delete this place"
+    "delete": "Delete this place",
+    "call": "Call {{phone}}"
   },
   "signIn": {
     "checkEmail": "Check your email and tap the confirmation link, then sign in here.",

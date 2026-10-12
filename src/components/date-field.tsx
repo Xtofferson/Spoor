@@ -6,7 +6,7 @@ import { Platform, Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dateLocale, useLanguage } from '@/lib/i18n';
 import { formatDate, fromDateString, toDateString } from '@/lib/trips';
@@ -30,7 +30,7 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
 
   if (Platform.OS === 'ios') {
     return (
-      <ThemedView type="backgroundElement" style={[styles.field, styles.iosField]}>
+      <ThemedView type="backgroundElement" style={[styles.field, styles.iosField, { borderColor: theme.border }]}>
         {/* Full-width row so the native picker isn't measured to zero width and becomes untappable. */}
         <Host matchContents={{ vertical: true }} style={styles.iosHost}>
           <DatePicker
@@ -53,9 +53,9 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
         accessibilityLabel={`${label}, ${formatDate(value, locale)}`}
         onPress={() => setDialogOpen(true)}
         style={({ pressed }) => pressed && styles.pressed}>
-        <ThemedView type="backgroundElement" style={[styles.field, styles.androidField]}>
+        <ThemedView type="backgroundElement" style={[styles.field, styles.androidField, { borderColor: theme.border }]}>
           <ThemedText>{label}</ThemedText>
-          <ThemedText style={{ color: theme.accent }}>{formatDate(value, locale)}</ThemedText>
+          <ThemedText style={{ color: theme.link, fontWeight: 600 }}>{formatDate(value, locale)}</ThemedText>
         </ThemedView>
       </Pressable>
       {dialogOpen && (
@@ -77,9 +77,12 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
 
 const styles = StyleSheet.create({
   field: {
-    borderRadius: Spacing.two,
+    justifyContent: 'center',
+    minHeight: 52,
+    borderWidth: BorderWidth,
+    borderRadius: Radius.card,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two + Spacing.one,
+    paddingVertical: Spacing.two,
   },
   iosField: {
     paddingVertical: Spacing.one,
@@ -89,6 +92,7 @@ const styles = StyleSheet.create({
   },
   androidField: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.two,
   },
