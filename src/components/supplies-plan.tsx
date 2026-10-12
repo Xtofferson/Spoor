@@ -19,7 +19,6 @@ import {
 } from '@/lib/fuel';
 import { dateLocale, useT, type Translate } from '@/lib/i18n';
 import type { SavedSupplies, SuppliesState } from '@/lib/route-supplies';
-import type { SupplyPointsState } from '@/lib/supplies';
 import { categoryText, gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan } from '@/lib/supply-points';
 import {
   formatDays,
@@ -360,16 +359,17 @@ export function WaterStretchList({
 export function SupplyWarnings({
   plan,
   categories,
-  points,
+  pendingCount,
 }: {
   plan?: SupplyPlan;
   categories: SupplyCategory[];
-  points: SupplyPointsState;
+  /** Places added on this phone that haven't uploaded yet. */
+  pendingCount: number;
 }) {
   const theme = useTheme();
   const t = useT();
   if (!plan) return null;
-  if (plan.crossings.length === 0 && plan.gaps.length === 0 && points.status !== 'offline' && points.pending.length === 0) {
+  if (plan.crossings.length === 0 && plan.gaps.length === 0 && pendingCount === 0) {
     return null;
   }
   return (
@@ -427,16 +427,9 @@ export function SupplyWarnings({
         />
       ))}
 
-      {points.status === 'offline' && (
+      {pendingCount > 0 && (
         <ThemedText type="small" themeColor="textSecondary">
-          {points.fetchedAt
-            ? t('supplies.offlineSaved', { date: shortDate(points.fetchedAt) })
-            : t('supplies.offlineNone')}
-        </ThemedText>
-      )}
-      {points.pending.length > 0 && (
-        <ThemedText type="small" themeColor="textSecondary">
-          {t('supplies.pendingUpload', { count: points.pending.length })}
+          {t('supplies.pendingUpload', { count: pendingCount })}
         </ThemedText>
       )}
     </View>
@@ -466,7 +459,9 @@ export function SuppliesStatus({
         <View style={styles.row}>
           <ActivityIndicator color={theme.accent} />
           <ThemedText type="small" themeColor="textSecondary">
-            {t('supplies.finding')}
+            {supplies.progress && supplies.progress.total > 1
+              ? t('supplies.checkingAreas', { done: supplies.progress.done + 1, total: supplies.progress.total })
+              : t('supplies.finding')}
           </ThemedText>
         </View>
       )}
@@ -474,6 +469,11 @@ export function SuppliesStatus({
         <ThemedText type="small" style={{ color: theme.danger }} accessibilityRole="alert">
           {supplies.message}
           {found ? ` ${t('supplies.showingSaved')}` : ''}
+        </ThemedText>
+      )}
+      {found?.incomplete && (
+        <ThemedText type="small" style={{ color: theme.warningText }}>
+          {t('supplies.incomplete')}
         </ThemedText>
       )}
       {found && (

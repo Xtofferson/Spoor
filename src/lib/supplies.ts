@@ -5,23 +5,16 @@
  */
 import { Directory, File, Paths } from 'expo-file-system';
 import * as Network from 'expo-network';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
-import type { LonLat } from '@/lib/route-math';
-import type { RouteSupplies } from '@/lib/route-points';
 import { storage } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import {
   categoryFromRow,
   DEFAULT_CATEGORIES,
-  osmSeedRows,
-  pointFromOsm,
-  pointFromRow,
-  routeBounds,
   rowFromPoint,
   type CategoryRow,
-  type PointRow,
   type SupplyCategory,
   type SupplyPoint,
 } from '@/lib/supply-points';
@@ -284,82 +277,16 @@ export function findSupplyPoint(id: string): SupplyPoint | undefined {
   return pending.get().find((point) => point.id === id) ?? shown.get(id);
 }
 
-// -- Points near a route -----------------------------------------------------------------
+// -- What the trip screens need ------------------------------------------------------------
 
-export type SupplyPointsState = {
-  /** Points from Supabase near the route, as last fetched (saved for offline use). */
-  shared: SupplyPoint[];
-  /** Places added on this phone that haven't been uploaded yet. */
-  pending: SupplyPoint[];
-  status: 'idle' | 'loading' | 'ready' | 'offline';
-  fetchedAt?: number;
-};
-
-type SavedPoints = { points: SupplyPoint[]; fetchedAt: number };
-
-/** Points are fetched in a box around the route this much wider than the 10 km search. */
-const BOUNDS_MARGIN_KM = 12;
-
-function pointsKey(routeId: string) {
-  return `spoor.supplyPoints.v1.${routeId}`;
+/** Places added on this phone that haven't been uploaded yet. */
+export function usePendingPoints(): SupplyPoint[] {
+  return useSyncExternalStore(pending.subscribe, pending.get, pending.get);
 }
 
-/**
- * Supply points near a route: shared ones from Supabase (fetched each time the route is
- * shown, and saved for offline use) and ones added on this phone.
- * `routeId` identifies the route for saving; `route` is its line.
- */
-export function useSupplyPoints(routeId: string, route: LonLat[] | undefined): SupplyPointsState {
-  const changes = useSyncExternalStore(version.subscribe, version.get, version.get);
-  const unsent = useSyncExternalStore(pending.subscribe, pending.get, pending.get);
-  const saved = useMemo(() => (routeId ? readJson<SavedPoints>(pointsKey(routeId)) : undefined), [routeId]);
-  const [result, setResult] = useState<{ request: string; saved?: SavedPoints; failed?: boolean } | null>(null);
-  const request = `${routeId}#${changes}`;
-  // The bounds as a string, so effects depend on them by value.
-  const bounds = useMemo(() => (route && route.length > 1 ? JSON.stringify(routeBounds(route, BOUNDS_MARGIN_KM)) : ''), [route]);
-
-  useEffect(() => {
-    if (!routeId || !bounds) return;
-    let cancelled = false;
-    const { minLat, maxLat, minLon, maxLon } = JSON.parse(bounds) as ReturnType<typeof routeBounds>;
-    supabase
-      .from('supply_points')
-      .select('*')
-      .gte('latitude', minLat)
-      .lte('latitude', maxLat)
-      .gte('longitude', minLon)
-      .lte('longitude', maxLon)
-      .limit(5000)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error || !data) {
-          setResult({ request, failed: true });
-          return;
-        }
-        const value: SavedPoints = { points: (data as PointRow[]).map(pointFromRow), fetchedAt: Date.now() };
-        storage.setItem(pointsKey(routeId), JSON.stringify(value));
-        setResult({ request, saved: value });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [routeId, bounds, request]);
-
-  const fresh = result?.request === request ? result : undefined;
-  const latest = fresh?.saved ?? saved;
-  const state = useMemo<SupplyPointsState>(
-    () => ({
-      shared: latest?.points ?? NO_POINTS,
-      pending: unsent,
-      status: !routeId ? 'idle' : fresh?.saved ? 'ready' : fresh?.failed ? 'offline' : 'loading',
-      fetchedAt: latest?.fetchedAt,
-    }),
-    [latest, unsent, routeId, fresh]
-  );
-  useEffect(() => {
-    remember(state.shared);
-  }, [state.shared]);
-  return state;
+/** Goes up whenever places are added or deleted in Supabase, so routes read them again. */
+export function useSuppliesVersion(): number {
+  return useSyncExternalStore(version.subscribe, version.get, version.get);
 }
 
 /** Remembers points shown on the map (e.g. fresh from OpenStreetMap), for the detail screen. */
@@ -367,24 +294,4 @@ export function useRememberPoints(points: SupplyPoint[]) {
   useEffect(() => {
     remember(points);
   }, [points]);
-}
-
-// -- Sharing OpenStreetMap places ---------------------------------------------------------
-
-/**
- * Shares places found on OpenStreetMap along a route with everyone, through Supabase's
- * seed_osm_supply_points function. Best effort: if it fails, the phone still has them.
- */
-export async function seedFromOsm(supplies: RouteSupplies, categoryList: SupplyCategory[]) {
-  const points = (supplies.supplies ?? []).map((place) => pointFromOsm(place, categoryList));
-  if (points.length === 0) return;
-  const rows = osmSeedRows(points);
-  for (let i = 0; i < rows.length; i += 500) {
-    const { error } = await supabase.rpc('seed_osm_supply_points', { points: rows.slice(i, i + 500) });
-    if (error) {
-      console.warn('Sharing OpenStreetMap supplies failed:', error.message);
-      return;
-    }
-  }
-  version.set(version.get() + 1);
 }

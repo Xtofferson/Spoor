@@ -1,5 +1,6 @@
-import { buildRouteLine, parseOverpassSupplies, overpassSuppliesQuery, type WaterPoint } from '../route-points';
 import type { LonLat } from '../route-math';
+import { buildRouteLine, type WaterPoint } from '../route-points';
+import { DEFAULT_CATEGORIES, fuelStationsFrom, pointFromRow, waterPointsFrom } from '../supply-points';
 import {
   formatDays,
   nightsAt,
@@ -9,7 +10,17 @@ import {
   waterStretches,
 } from '../water';
 
+import { parseOverpass } from '../../../supabase/functions/supplies/osm';
 import botswanaWater from './fixtures/overpass-botswana-water.json';
+
+/** Fuel and water from an Overpass response, as the server stores them and the app reads them. */
+function parseOverpassSupplies(response: unknown) {
+  const categories = DEFAULT_CATEGORIES.map((c) => ({ id: c.id, label: c.label, osm_tags: c.osmTags }));
+  const points = parseOverpass(response, categories).points.map((row) =>
+    pointFromRow({ ...row, id: row.osm_id, notes: null, photo_path: null, created_by: null })
+  );
+  return { fuel: fuelStationsFrom(points), water: waterPointsFrom(points) };
+}
 
 const allTar = { tar: 1, gravel: 0, unpaved: 0, unknown: 0 };
 
@@ -57,13 +68,6 @@ describe('reading water points from OpenStreetMap', () => {
   it('reads the real response from Botswana (one well along Palapye → Letlhakane and Nata → Kubu Island)', () => {
     const { water: points } = parseOverpassSupplies(botswanaWater);
     expect(points).toEqual([expect.objectContaining({ kind: 'Well', needsTreating: true })]);
-  });
-
-  it('searches for all four water tags and fuel in one query', () => {
-    const query = overpassSuppliesQuery([at(0), at(400)]);
-    for (const tag of ['"amenity"="fuel"', '"amenity"="drinking_water"', '"amenity"="water_point"', '"man_made"="water_tap"', '"man_made"="water_well"']) {
-      expect(query).toContain(`nwr[${tag}](around:5000,`);
-    }
   });
 });
 

@@ -16,7 +16,10 @@
     "signInToDelete": "Sign in to delete places.",
     "deleteFailed": "Couldn’t delete it. Check your connection and try again.",
     "signInForRoutes": "Sign in again to plan routes.",
-    "orsUserLimit": "You’ve planned a lot of routes today. Routes you’ve already looked at still work; try again tomorrow."
+    "orsUserLimit": "You’ve planned a lot of routes today. Routes you’ve already looked at still work; try again tomorrow.",
+    "signInForSupplies": "Sign in again to see fuel, water and supplies.",
+    "suppliesUserLimit": "You’ve looked up a lot of routes today. What was found before still shows; try again tomorrow.",
+    "suppliesOffline": "Couldn’t load fuel, water and supplies. Check your connection and try again."
   },
   "routeOptions": {
     "pinned": "Pinned on the map",
@@ -154,6 +157,14 @@
         "label": "Veterinary checkpoint",
         "noun": "veterinary checkpoint",
         "routeWarning": "Fresh meat may be confiscated here. Buy meat after this checkpoint."
+      },
+      "fuel": {
+        "label": "Fuel",
+        "noun": "fuel station"
+      },
+      "water": {
+        "label": "Water",
+        "noun": "water point"
       }
     },
     "fuel": "Fuel",
@@ -176,7 +187,7 @@
     },
     "finding": "Finding fuel, water and supplies near the route…",
     "showingSaved": "Showing what was saved earlier.",
-    "source": "{{fuel}} and {{water}} from OpenStreetMap, checked {{date}}. Assumes you fill up at each planned fuel stop and every water point. They can close or run dry: check locally.",
+    "source": "{{fuel}} and {{water}} from OpenStreetMap and travellers, checked {{date}}. Assumes you fill up at each planned fuel stop and every water point. They can close or run dry: check locally.",
     "fuelStops": {
       "one": "{{count}} fuel stop",
       "other": "{{count}} fuel stops"
@@ -193,7 +204,9 @@
       "other": "{{count}} on the route"
     },
     "gapNote": "{{title}}: {{from}}",
-    "waterNote": "Water: carry enough for {{days}} without a water point ({{people}} × {{perDay}} litres × {{days}} = {{litres}} litres)"
+    "waterNote": "Water: carry enough for {{days}} without a water point ({{people}} × {{perDay}} litres × {{days}} = {{litres}} litres)",
+    "checkingAreas": "Checking the route for fuel, water and supplies… part {{done}} of {{total}}",
+    "incomplete": "OpenStreetMap was busy, so part of the route hasn’t been checked yet and some places may be missing. Tap Refresh in a few minutes."
   },
   "common": {
     "cancel": "Cancel",

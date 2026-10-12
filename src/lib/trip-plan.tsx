@@ -19,14 +19,17 @@ import {
 import { useT } from '@/lib/i18n';
 import { applyChosenRoutes, useRoutePlan, type RoutePlanState, type ShownRoute } from '@/lib/route-plan';
 import { buildRouteLine, type RouteLine } from '@/lib/route-points';
-import { routeShapeId, useRouteSupplies, type SavedSupplies, type SuppliesState } from '@/lib/route-supplies';
-import { seedFromOsm, useRememberPoints, useSupplyCategories, useSupplyPoints, type SupplyPointsState } from '@/lib/supplies';
+import { useRouteSupplies, type SavedSupplies, type SuppliesState } from '@/lib/route-supplies';
+import { usePendingPoints, useRememberPoints, useSupplyCategories, useSuppliesVersion } from '@/lib/supplies';
 import {
+  FUEL,
+  fuelStationsFrom,
   mergePoints,
-  osmFilters,
   planSupplies,
-  pointFromOsm,
   pointsNearRoute,
+  supplyCategories,
+  WATER,
+  waterPointsFrom,
   type SupplyCategory,
   type SupplyPlan,
   type SupplyPoint,
@@ -62,7 +65,8 @@ export type TripPlan = {
 
   categories: SupplyCategory[];
   supplyPoints: SupplyPoint[];
-  pointsState: SupplyPointsState;
+  /** Places added on this phone that haven't uploaded yet. */
+  pending: SupplyPoint[];
   supplyPlan?: SupplyPlan;
 };
 
@@ -83,22 +87,25 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
   const route = useMemo(() => (savedPlan ? applyChosenRoutes(savedPlan, trip) : undefined), [savedPlan, trip]);
   const line = useMemo(() => (route ? buildRouteLine(route.legs) : undefined), [route]);
 
-  // Fuel, water, towns and supplies along the route, from OpenStreetMap.
+  // Fuel, water, towns and supplies along the route: from Supabase (OpenStreetMap and
+  // travellers), plus places added on this phone that haven't uploaded yet.
   const vehicle = useVehicle();
   const people = trip.people ?? 1;
   const [suppliesRefreshKey, setSuppliesRefreshKey] = useState(0);
-  const categories = useSupplyCategories();
-  const supplyFilters = useMemo(() => osmFilters(categories), [categories]);
-  // Places found on OpenStreetMap are shared with everyone through Supabase.
-  const supplies = useRouteSupplies(line?.points, suppliesRefreshKey, supplyFilters, (fresh) => {
-    void seedFromOsm(fresh, categories);
-  });
+  const allCategories = useSupplyCategories();
+  const categories = useMemo(() => supplyCategories(allCategories), [allCategories]);
+  const version = useSuppliesVersion();
+  const supplies = useRouteSupplies(line?.points, suppliesRefreshKey, version);
   const found = supplies.status === 'ready' ? supplies : supplies.status === 'idle' ? undefined : supplies.saved;
+  const pending = usePendingPoints();
+  const points = useMemo(() => mergePoints(found?.points ?? [], pending), [found, pending]);
+  const fuelStations = useMemo(() => fuelStationsFrom(points), [points]);
+  const waterPoints = useMemo(() => waterPointsFrom(points), [points]);
 
   // Stop names can fall back to text like "Fuel station (km 58)", so they follow the language.
   const fuelStops = useMemo(
-    () => (line && found ? fuelStopsAlong(line, found.fuel, found.settlements, t) : []),
-    [line, found, t]
+    () => (line && found ? fuelStopsAlong(line, fuelStations, found.settlements, t) : []),
+    [line, found, fuelStations, t]
   );
   // Fuel is planned between the towns chosen for the trip, or every stop if none are.
   const fuelChoices = trip.fuelStops ?? NO_CHOICES;
@@ -113,8 +120,8 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
   );
 
   const waterStops = useMemo(
-    () => (line && found ? waterStopsAlong(line, found.water, found.settlements, t) : []),
-    [line, found, t]
+    () => (line && found ? waterStopsAlong(line, waterPoints, found.settlements, t) : []),
+    [line, found, waterPoints, t]
   );
   // Nights at each trip stop on the route, in route order, from its arrive and leave dates.
   const nights = useMemo(
@@ -133,17 +140,16 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     [line, found, waterStops, vehicle, people, nights]
   );
 
-  // Butcheries, firewood, checkpoints…: shared ones from Supabase, fresh ones from
-  // OpenStreetMap, and ones added on this phone, within 10 km of the route.
-  const routeId = useMemo(() => (line ? routeShapeId(line.points) : ''), [line]);
-  const pointsState = useSupplyPoints(routeId, line?.points);
-  const osmPoints = useMemo(
-    () => (found?.supplies ?? []).map((place) => pointFromOsm(place, categories)),
-    [found, categories]
-  );
+  // Butcheries, firewood, checkpoints…: every other kind of place within 10 km of the route.
   const supplyPoints = useMemo(
-    () => (line ? pointsNearRoute(line, mergePoints(pointsState.shared, osmPoints, pointsState.pending)) : []),
-    [line, pointsState.shared, pointsState.pending, osmPoints]
+    () =>
+      line
+        ? pointsNearRoute(
+            line,
+            points.filter((point) => point.category !== FUEL && point.category !== WATER)
+          )
+        : [],
+    [line, points]
   );
   useRememberPoints(supplyPoints);
   const supplyPlan = useMemo(
@@ -171,7 +177,7 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     waterStretches: waterStretchList,
     categories,
     supplyPoints,
-    pointsState,
+    pending,
     supplyPlan,
   };
   return <TripPlanContext value={value}>{children}</TripPlanContext>;

@@ -18,19 +18,21 @@ import {
   type Vehicle,
 } from '../fuel';
 import { surfaceShares, type LonLat } from '../route-math';
-import {
-  buildRouteLine,
-  locateOnRoute,
-  overpassSuppliesQuery,
-  parseOverpassSupplies,
-  type LineLeg,
-} from '../route-points';
+import { buildRouteLine, locateOnRoute, type LineLeg } from '../route-points';
+import { DEFAULT_CATEGORIES, fuelStationsFrom, pointFromRow, settlementFromRow } from '../supply-points';
 
+import { parseOverpass } from '../../../supabase/functions/supplies/osm';
 import overpassFuel from './fixtures/overpass-polokwane-palapye-fuel.json';
 import polokwanePalapye from './fixtures/ors-polokwane-palapye-fastest.json';
 
-/** Fuel stations from the saved Overpass response. */
-const parseOverpassStations = (response: unknown) => parseOverpassSupplies(response).fuel;
+/** Fuel stations from a saved Overpass response, as the server stores them and the app reads them. */
+function parseOverpassStations(response: unknown) {
+  const categories = DEFAULT_CATEGORIES.map((c) => ({ id: c.id, label: c.label, osm_tags: c.osmTags }));
+  const rows = parseOverpass(response, categories).points;
+  return fuelStationsFrom(
+    rows.map((row) => pointFromRow({ ...row, id: row.osm_id, notes: null, photo_path: null, created_by: null }))
+  );
+}
 
 /** The prototype's Land Cruiser 79: 130 L tank, 2 × 20 L jerry cans, 13 / 15 / 19 L per 100 km. */
 const landCruiser: Vehicle = {
@@ -151,15 +153,6 @@ describe('route line', () => {
 });
 
 describe('fuel stations', () => {
-  it('builds an Overpass query for fuel within 5 km of a simplified route line', () => {
-    const query = overpassSuppliesQuery(polokwaneLeg.geometry);
-    expect(query).toMatch(/^\[out:json\]\[timeout:90\];\(nwr\["amenity"="fuel"\]\(around:5000,-23\.9/);
-    expect(query).toMatch(/out center tags;$/);
-    // Lat,lon pairs, far fewer than the route's 1,500 points.
-    const pairs = query.match(/around:5000,([^)]*)\)/)![1].split(',').length / 2;
-    expect(pairs).toBeLessThan(150);
-  });
-
   it('reads stations from Overpass, including ones mapped as areas', () => {
     const stations = parseOverpassStations(overpassFuel);
     expect(stations.length).toBeGreaterThan(40);
@@ -367,16 +360,18 @@ describe('naming fuel stops after towns', () => {
   ]);
   const at = (km: number, east = 0): LonLat => [east, (km / 400) * 3.6];
 
-  it('reads towns and villages from Overpass, and searches a little wider for them', () => {
-    const { settlements } = parseOverpassSupplies({
-      elements: [
-        { type: 'node', id: 1, lat: -22.5, lon: 27.1, tags: { place: 'village', name: 'Serowe' } },
-        { type: 'node', id: 2, lat: -22.6, lon: 27.2, tags: { place: 'suburb', name: 'Not a town' } },
-        { type: 'node', id: 3, lat: -22.7, lon: 27.3, tags: { place: 'town' } },
-      ],
-    });
-    expect(settlements).toEqual([{ name: 'Serowe', coordinates: [27.1, -22.5] }]);
-    expect(overpassSuppliesQuery([at(0), at(400)])).toContain('node["place"~"^(city|town|village)$"]["name"](around:11000,');
+  it('reads towns and villages from OpenStreetMap', () => {
+    const { settlements } = parseOverpass(
+      {
+        elements: [
+          { type: 'node', id: 1, lat: -22.5, lon: 27.1, tags: { place: 'village', name: 'Serowe' } },
+          { type: 'node', id: 2, lat: -22.6, lon: 27.2, tags: { place: 'suburb', name: 'Not a town' } },
+          { type: 'node', id: 3, lat: -22.7, lon: 27.3, tags: { place: 'town' } },
+        ],
+      },
+      []
+    );
+    expect(settlements.map(settlementFromRow)).toEqual([{ name: 'Serowe', coordinates: [27.1, -22.5] }]);
   });
 
   it('names a stop after the nearest town, else the station, else its brand and km', () => {

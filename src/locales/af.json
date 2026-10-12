@@ -16,7 +16,10 @@
     "signInToDelete": "Meld aan om plekke uit te vee.",
     "deleteFailed": "Kon dit nie uitvee nie. Kyk na jou verbinding en probeer weer.",
     "signInForRoutes": "Meld weer aan om roetes te beplan.",
-    "orsUserLimit": "Jy het vandag baie roetes beplan. Roetes wat jy reeds gesien het, werk steeds; probeer môre weer."
+    "orsUserLimit": "Jy het vandag baie roetes beplan. Roetes wat jy reeds gesien het, werk steeds; probeer môre weer.",
+    "signInForSupplies": "Meld weer aan om brandstof, water en voorrade te sien.",
+    "suppliesUserLimit": "Jy het vandag baie roetes nagegaan. Wat voorheen gevind is, wys steeds; probeer môre weer.",
+    "suppliesOffline": "Kon nie brandstof, water en voorrade laai nie. Kyk na jou verbinding en probeer weer."
   },
   "routeOptions": {
     "pinned": "Op die kaart vasgespeld",
@@ -154,6 +157,14 @@
         "label": "Veeartsenykundige kontrolepunt",
         "noun": "veeartsenykundige kontrolepunt",
         "routeWarning": "Vars vleis kan hier gekonfiskeer word. Koop vleis ná hierdie kontrolepunt."
+      },
+      "fuel": {
+        "label": "Brandstof",
+        "noun": "vulstasie"
+      },
+      "water": {
+        "label": "Water",
+        "noun": "waterpunt"
       }
     },
     "fuel": "Brandstof",
@@ -176,7 +187,7 @@
     },
     "finding": "Soek brandstof, water en voorrade naby die roete…",
     "showingSaved": "Wys wat vroeër gestoor is.",
-    "source": "{{fuel}} en {{water}} van OpenStreetMap, nagegaan op {{date}}. Neem aan jy maak vol by elke beplande vulstasie en elke waterpunt. Hulle kan sluit of opdroog: vra plaaslik.",
+    "source": "{{fuel}} en {{water}} van OpenStreetMap en reisigers, nagegaan op {{date}}. Neem aan jy maak vol by elke beplande vulstasie en elke waterpunt. Hulle kan sluit of opdroog: vra plaaslik.",
     "fuelStops": {
       "one": "{{count}} vulstasie",
       "other": "{{count}} vulstasies"
@@ -193,7 +204,9 @@
       "other": "{{count}} op die roete"
     },
     "gapNote": "{{title}}: {{from}}",
-    "waterNote": "Water: neem genoeg vir {{days}} sonder ’n waterpunt ({{people}} × {{perDay}} liter × {{days}} = {{litres}} liter)"
+    "waterNote": "Water: neem genoeg vir {{days}} sonder ’n waterpunt ({{people}} × {{perDay}} liter × {{days}} = {{litres}} liter)",
+    "checkingAreas": "Gaan die roete na vir brandstof, water en voorrade… deel {{done}} van {{total}}",
+    "incomplete": "OpenStreetMap was besig, so ’n deel van die roete is nog nie nagegaan nie en party plekke kan ontbreek. Tik Laai weer oor ’n paar minute."
   },
   "common": {
     "cancel": "Kanselleer",

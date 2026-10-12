@@ -164,7 +164,7 @@ export default function SuppliesTab() {
             supplies={supplies}
           />
 
-          <SupplyWarnings plan={plan.supplyPlan} categories={categories} points={plan.pointsState} />
+          <SupplyWarnings plan={plan.supplyPlan} categories={categories} pendingCount={plan.pending.length} />
 
           <SuppliesStatus
             supplies={supplies}

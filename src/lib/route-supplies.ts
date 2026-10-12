@@ -1,62 +1,126 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { simplifyLine, type LonLat } from '@/lib/route-math';
-import {
-  overpassSuppliesQuery,
-  parseOverpassSupplies,
-  type OsmSupplyFilter,
-  type RouteSupplies,
-} from '@/lib/route-points';
-import { storage } from '@/lib/storage';
+import { accessToken } from '@/lib/api-auth';
 import { t } from '@/lib/i18n';
 import { shareRequest } from '@/lib/in-flight';
+import { simplifyLine, type LonLat } from '@/lib/route-math';
+import type { Settlement } from '@/lib/route-points';
+import { storage } from '@/lib/storage';
+import { pointFromRow, settlementFromRow, type PointRow, type SettlementRow, type SupplyPoint } from '@/lib/supply-points';
+
+import { tilesAlong } from '../../supabase/functions/supplies/osm';
 
 /**
- * Public Overpass servers, tried in order. They're often busy, and refuse requests that
- * don't say which app they come from.
+ * Fuel, water, butcheries, firewood and town names along a route, from Supabase. The
+ * "supplies" Edge Function keeps them up to date from OpenStreetMap, one 0.25° tile at a
+ * time, shared by everyone; phones never call OpenStreetMap themselves.
  */
-const OVERPASS_SERVERS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-];
-const USER_AGENT = 'Spoor/1.0 (overland trip planner app; https://github.com/Xtofferson/Spoor)';
-const TIMEOUT_MS = 90_000;
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+/** The Edge Function takes at most this many tiles per call. */
+const TILES_PER_CALL = 20;
+/** Tiles read from Supabase per request, to keep addresses short. */
+const TILES_PER_READ = 100;
+/** Supabase sends at most this many rows per request. */
+const PAGE_SIZE = 1000;
+/** A saved result older than this is looked up again (in the background) when the trip opens. */
+const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;
+
+/** Tiles the server has confirmed are up to date since the app started, so they aren't sent again. */
+const readyTiles = new Set<string>();
 
 export class SuppliesError extends Error {}
 
-/**
- * Fuel stations and water points within 5 km of a route, the towns near it, and places in
- * the supply categories (butcheries, firewood…) within 10 km, from OpenStreetMap.
- */
-export async function fetchRouteSupplies(route: LonLat[], supplyFilters: OsmSupplyFilter[] = []): Promise<RouteSupplies> {
-  const body = `data=${encodeURIComponent(overpassSuppliesQuery(route, supplyFilters))}`;
-  for (const server of OVERPASS_SERVERS) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-      const response = await fetch(server, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json',
-          'User-Agent': USER_AGENT,
-        },
-        body,
-        signal: controller.signal,
-      });
-      // A busy server answers with an HTML error page instead of JSON; try the next one.
-      if (!response.ok) continue;
-      const json = await response.json().catch(() => undefined);
-      if (json?.elements) return parseOverpassSupplies(json, supplyFilters);
-    } catch {
-      // Offline, timed out or refused: try the next server.
-    } finally {
-      clearTimeout(timer);
+export type RouteSupplies = {
+  /** Every place near the route: fuel, water, supplies and checkpoints, from OpenStreetMap and travellers. */
+  points: SupplyPoint[];
+  /** Towns and villages near the route, to name the stops after. */
+  settlements: Settlement[];
+  /** Some tiles couldn't be brought up to date (OpenStreetMap was busy), so places may be missing. */
+  incomplete?: boolean;
+};
+
+function chunks<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/** Asks the Edge Function to bring some tiles up to date. False when OpenStreetMap was busy. */
+async function prepareTiles(tiles: string[], token: string): Promise<boolean> {
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/functions/v1/supplies`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tiles }),
+    });
+  } catch {
+    return false;
+  }
+  if (response.ok) {
+    tiles.forEach((tile) => readyTiles.add(tile));
+    return true;
+  }
+  const body = await response.json().catch(() => null);
+  if (body?.error?.code === 'spoor-daily-limit') throw new SuppliesError(t('errors.suppliesUserLimit'));
+  if (response.status === 401) throw new SuppliesError(t('errors.signInForSupplies'));
+  return false;
+}
+
+/** Every row of a table in some tiles, page by page. */
+async function readTiles<T>(table: string, tiles: string[], token: string): Promise<T[]> {
+  const rows: T[] = [];
+  for (const group of chunks(tiles, TILES_PER_READ)) {
+    const list = encodeURIComponent(group.map((tile) => `"${tile}"`).join(','));
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/${table}?select=*&tile=in.(${list})&order=osm_id&limit=${PAGE_SIZE}&offset=${offset}`,
+        { headers: { apikey: SUPABASE_KEY ?? '', Authorization: `Bearer ${token}` } }
+      );
+      if (!response.ok) throw new Error(`Reading ${table} failed (${response.status})`);
+      const page = (await response.json()) as T[];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
     }
   }
-  throw new SuppliesError(
-    t('errors.suppliesBusy')
+  return rows;
+}
+
+/**
+ * Brings the tiles along a route up to date (through the Edge Function, which only fetches
+ * OpenStreetMap for tiles not looked up in the last 30 days), then reads what's in them.
+ * `onProgress` hears how many groups of tiles are done.
+ */
+export async function fetchRouteSupplies(
+  route: LonLat[],
+  onProgress?: (done: number, total: number) => void
+): Promise<RouteSupplies> {
+  const token = await accessToken();
+  if (!token || !SUPABASE_URL) throw new SuppliesError(t('errors.signInForSupplies'));
+
+  const tiles = tilesAlong(simplifyLine(route, 300));
+  const batches = chunks(
+    tiles.filter((tile) => !readyTiles.has(tile)),
+    TILES_PER_CALL
   );
+  let incomplete = false;
+  for (const [index, batch] of batches.entries()) {
+    onProgress?.(index, batches.length);
+    if (!(await prepareTiles(batch, token))) incomplete = true;
+  }
+  onProgress?.(batches.length, batches.length);
+
+  try {
+    const [points, settlements] = await Promise.all([
+      readTiles<PointRow>('supply_points', tiles, token),
+      readTiles<SettlementRow>('settlements', tiles, token),
+    ]);
+    return { points: points.map(pointFromRow), settlements: settlements.map(settlementFromRow), incomplete };
+  } catch {
+    throw new SuppliesError(incomplete ? t('errors.suppliesBusy') : t('errors.suppliesOffline'));
+  }
 }
 
 // -- Saved on the phone, so a trip's fuel and water stops show offline -------------
@@ -65,29 +129,17 @@ export type SavedSupplies = RouteSupplies & { fetchedAt: number };
 
 /** A short, stable id for a route's shape, e.g. for saving what was found along it. */
 export function routeShapeId(route: LonLat[]): string {
-  return hashText(routeShapeText(route));
-}
-
-function routeShapeText(route: LonLat[]): string {
-  return simplifyLine(route, 300)
+  const text = simplifyLine(route, 300)
     .map(([lon, lat]) => `${lon.toFixed(3)},${lat.toFixed(3)}`)
     .join(';');
-}
-
-function hashText(text: string): string {
   let hash = 5381;
   for (let i = 0; i < text.length; i++) hash = ((hash * 33) ^ text.charCodeAt(i)) >>> 0;
   return `${hash.toString(36)}.${text.length}`;
 }
 
-/**
- * Where a route's results are saved: by its shape and what's searched for along it, so
- * they're reused for the same route, and looked up again when a supply category is added.
- */
-function routeKey(route: LonLat[], supplyFilters: OsmSupplyFilter[]): string {
-  const searched = supplyFilters.map((filter) => `${filter.category}:${filter.tags.join('+')}`).join('|');
-  // v4: fuel, water, the towns near the route and supply categories.
-  return `spoor.supplies.v4.${hashText(`${routeShapeText(route)}#${searched}`)}`;
+function routeKey(route: LonLat[]): string {
+  // v5: everything from Supabase, by tile.
+  return `spoor.supplies.v5.${routeShapeId(route)}`;
 }
 
 function readSaved(key: string): SavedSupplies | undefined {
@@ -101,55 +153,46 @@ function readSaved(key: string): SavedSupplies | undefined {
 }
 
 const IDLE = { status: 'idle' } as const;
-const NO_FILTERS: OsmSupplyFilter[] = [];
 
 export type SuppliesState =
   | { status: 'idle' }
-  | { status: 'loading'; saved?: SavedSupplies }
+  | { status: 'loading'; saved?: SavedSupplies; progress?: { done: number; total: number } }
   | ({ status: 'ready' } & SavedSupplies)
   | { status: 'error'; message: string; saved?: SavedSupplies };
 
 /**
- * Fuel stations, water points and supplies along a route. Ones saved for the same route show
- * straight away, even offline; increase `refreshKey` to look them up again. `onFetched` is
- * told about each fresh result, e.g. to share it.
+ * Fuel, water and supplies along a route. What was saved for the same route shows straight
+ * away, even offline, and is looked up again in the background once it's a day old.
+ * Increase `refreshKey` to look them up now; `version` goes up when places are added or
+ * deleted, so they're read again.
  */
-export function useRouteSupplies(
-  route: LonLat[] | undefined,
-  refreshKey = 0,
-  supplyFilters: OsmSupplyFilter[] = NO_FILTERS,
-  onFetched?: (supplies: RouteSupplies) => void
-): SuppliesState {
-  const key = useMemo(
-    () => (route && route.length > 1 ? routeKey(route, supplyFilters) : ''),
-    [route, supplyFilters]
-  );
+export function useRouteSupplies(route: LonLat[] | undefined, refreshKey = 0, version = 0): SuppliesState {
+  const key = useMemo(() => (route && route.length > 1 ? routeKey(route) : ''), [route]);
   const saved = useMemo(() => (key ? readSaved(key) : undefined), [key]);
-  const useSaved = saved !== undefined && refreshKey === 0;
-  const request = `${key}#${refreshKey}`;
+  const request = `${key}#${refreshKey}#${version}`;
   const [result, setResult] = useState<{ request: string; value: SuppliesState } | null>(null);
   // The latest route, read when fetching. The fetch itself depends only on `key`, so a new
-  // array with the same shape doesn't look stations up again.
+  // array with the same shape doesn't look supplies up again.
   const routeRef = useRef(route);
-  const filtersRef = useRef(supplyFilters);
-  const onFetchedRef = useRef(onFetched);
   useEffect(() => {
     routeRef.current = route;
-    filtersRef.current = supplyFilters;
-    onFetchedRef.current = onFetched;
   });
 
   useEffect(() => {
     const line = routeRef.current;
-    if (!key || useSaved || !line) return;
+    if (!key || !line) return;
+    const fresh = saved && !saved.incomplete && Date.now() - saved.fetchedAt < REFRESH_AFTER_MS;
+    if (fresh && refreshKey === 0 && version === 0) return;
     let cancelled = false;
-    const onFetched = onFetchedRef.current;
-    shareRequest(key, () =>
-      fetchRouteSupplies(line, filtersRef.current).then((supplies) => {
+    shareRequest(request, () =>
+      fetchRouteSupplies(line, (done, total) => {
+        if (!cancelled && total > 0) {
+          setResult({ request, value: { status: 'loading', saved, progress: { done, total } } });
+        }
+      }).then((supplies) => {
+        // An incomplete result is kept, but looked up again next time the trip opens.
         const value: SavedSupplies = { ...supplies, fetchedAt: Date.now() };
         storage.setItem(key, JSON.stringify(value));
-        // Told once per lookup, however many screens are waiting for it.
-        onFetched?.(supplies);
         return value;
       })
     )
@@ -157,14 +200,13 @@ export function useRouteSupplies(
         if (!cancelled) setResult({ request, value: { status: 'ready', ...value } });
       })
       .catch((error: unknown) => {
-        const message =
-          error instanceof SuppliesError ? error.message : t('errors.supplies');
+        const message = error instanceof SuppliesError ? error.message : t('errors.supplies');
         if (!cancelled) setResult({ request, value: { status: 'error', message } });
       });
     return () => {
       cancelled = true;
     };
-  }, [key, useSaved, request]);
+  }, [key, saved, refreshKey, version, request]);
 
   // Built once per saved result, so screens can depend on what this returns.
   const savedReady = useMemo<SuppliesState | undefined>(() => saved && { status: 'ready', ...saved }, [saved]);
@@ -179,6 +221,7 @@ export function useRouteSupplies(
     // Keep showing what was saved under an error, e.g. when offline.
     return failed ?? result.value;
   }
-  if (useSaved && savedReady) return savedReady;
+  // While a lookup runs in the background, what was saved shows.
+  if (savedReady && refreshKey === 0) return savedReady;
   return loading;
 }

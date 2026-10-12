@@ -1,24 +1,25 @@
 import type { LonLat } from '../route-math';
-import { buildRouteLine, osmTagFilter, overpassSuppliesQuery, parseOverpassSupplies } from '../route-points';
+import { buildRouteLine } from '../route-points';
 import {
   categoryFromRow,
   DEFAULT_CATEGORIES,
+  fuelStationsFrom,
   gapAdvice,
   gapTitle,
   mergePoints,
   newPointId,
-  osmFilters,
-  osmSeedRows,
   planSupplies,
-  pointFromOsm,
   pointFromRow,
   pointsNearRoute,
-  routeBounds,
   rowFromPoint,
+  supplyCategories,
   supplyFormErrors,
+  waterPointsFrom,
   type SupplyCategory,
   type SupplyPoint,
 } from '../supply-points';
+
+import { parseOverpass } from '../../../supabase/functions/supplies/osm';
 
 const allTar = { tar: 1, gravel: 0, unpaved: 0, unknown: 0 };
 
@@ -30,7 +31,9 @@ const line = buildRouteLine([
 /** The point `km` along that route, `eastKm` off it. */
 const at = (km: number, eastKm = 0): LonLat => [eastKm / 111.3, (km / 600) * 5.4];
 
-const [butcher, firewood, checkpoint] = DEFAULT_CATEGORIES;
+const category = (id: string) => DEFAULT_CATEGORIES.find((c) => c.id === id)!;
+const [butcher, firewood, checkpoint] = ['butcher', 'firewood', 'vet_checkpoint'].map(category);
+const osmCategories = DEFAULT_CATEGORIES.map((c) => ({ id: c.id, label: c.label, osm_tags: c.osmTags }));
 
 function point(id: string, category: string, km: number, extra: Partial<SupplyPoint> = {}): SupplyPoint {
   return { id, category, name: id, coordinates: at(km), source: 'user', ...extra };
@@ -52,52 +55,39 @@ describe('supply categories', () => {
       sort: 40,
     });
     expect(atm).toMatchObject({ id: 'atm', osmTags: ['amenity=atm'], gapKm: 300, routeWarning: undefined });
-    expect(osmFilters([...DEFAULT_CATEGORIES, atm])).toEqual([
-      { category: 'butcher', tags: ['shop=butcher'] },
-      { category: 'firewood', tags: ['shop=firewood'] },
-      { category: 'atm', tags: ['amenity=atm'] },
+    // Planned as a supply, like butcheries; fuel and water have their own planning.
+    expect(supplyCategories([...DEFAULT_CATEGORIES, atm]).map((c) => c.id)).toEqual([
+      'butcher',
+      'firewood',
+      'vet_checkpoint',
+      'atm',
     ]);
-  });
-
-  it('only turns plain key=value tags into Overpass filters', () => {
-    expect(osmTagFilter('shop=butcher')).toBe('["shop"="butcher"]');
-    expect(osmTagFilter('shop=butcher"];out;')).toBeUndefined();
-    expect(osmTagFilter('shop')).toBeUndefined();
   });
 });
 
-describe('finding supplies on OpenStreetMap', () => {
-  const filters = osmFilters(DEFAULT_CATEGORIES);
-
-  it('searches for butcheries and firewood within 10 km of the route', () => {
-    const query = overpassSuppliesQuery([at(0), at(600)], filters);
-    expect(query).toContain('nwr["shop"="butcher"](around:10000,');
-    expect(query).toContain('nwr["shop"="firewood"](around:10000,');
-    // Checkpoints have no OpenStreetMap tags; travellers add them.
-    expect(query).not.toContain('checkpoint');
-  });
+describe('places from OpenStreetMap, as the server stores them', () => {
+  const rows = parseOverpass(
+    {
+      elements: [
+        {
+          type: 'node',
+          id: 7,
+          lat: -21.4,
+          lon: 25.6,
+          tags: { shop: 'butcher', name: 'Nata Butchery', phone: '+267 621 1234', opening_hours: 'Mo-Sa 07:00-18:00', check_date: '2025-06-01' },
+        },
+        { type: 'way', id: 8, center: { lat: -21.5, lon: 25.7 }, tags: { shop: 'firewood' } },
+        { type: 'node', id: 9, lat: -21.6, lon: 25.8, tags: { amenity: 'fuel', brand: 'Engen', 'addr:city': 'Nata' } },
+        { type: 'node', id: 10, lat: -21.7, lon: 25.9, tags: { man_made: 'water_well' } },
+      ],
+    },
+    osmCategories
+  ).points;
+  const points = rows.map((row) => pointFromRow({ ...row, id: `uuid-${row.osm_id}`, notes: null, photo_path: null, created_by: null }));
 
   it('reads them with phone, opening hours and check date, marked as from OSM', () => {
-    const { supplies } = parseOverpassSupplies(
-      {
-        elements: [
-          {
-            type: 'node',
-            id: 7,
-            lat: -21.4,
-            lon: 25.6,
-            tags: { shop: 'butcher', name: 'Nata Butchery', phone: '+267 621 1234', opening_hours: 'Mo-Sa 07:00-18:00', check_date: '2025-06-01' },
-          },
-          { type: 'way', id: 8, center: { lat: -21.5, lon: 25.7 }, tags: { shop: 'firewood' } },
-          { type: 'node', id: 9, lat: -21.6, lon: 25.8, tags: { amenity: 'fuel' } },
-        ],
-      },
-      filters
-    );
-    expect(supplies).toHaveLength(2);
-    const points = supplies!.map((place) => pointFromOsm(place, DEFAULT_CATEGORIES));
+    expect(points.map((p) => p.category)).toEqual(['butcher', 'firewood', 'fuel', 'water']);
     expect(points[0]).toMatchObject({
-      id: 'osm:node/7',
       category: 'butcher',
       name: 'Nata Butchery',
       phone: '+267 621 1234',
@@ -106,18 +96,24 @@ describe('finding supplies on OpenStreetMap', () => {
       source: 'OSM',
       osmId: 'node/7',
     });
-    // No name: named after its category.
-    expect(points[1]).toMatchObject({ name: 'Firewood', osmId: 'way/8' });
-    expect(osmSeedRows(points)[0]).toEqual({
-      category: 'butcher',
-      name: 'Nata Butchery',
-      latitude: -21.4,
-      longitude: 25.6,
-      phone: '+267 621 1234',
-      opening_hours: 'Mo-Sa 07:00-18:00',
-      osm_id: 'node/7',
-      last_confirmed: '2025-06-01',
-    });
+    // No name: named after its category, and marked as not really named.
+    expect(points[1]).toMatchObject({ name: 'Firewood', osmId: 'way/8', details: { named: false } });
+  });
+
+  it('turns fuel and water rows into stations and water points, keeping OpenStreetMap ids', () => {
+    expect(fuelStationsFrom(points)).toEqual([
+      { id: 'node/9', coordinates: [25.8, -21.6], name: undefined, brand: 'Engen', town: 'Nata' },
+    ]);
+    expect(waterPointsFrom(points)).toEqual([
+      expect.objectContaining({ id: 'node/10', kind: 'Well', needsTreating: true, notForDrinking: false }),
+    ]);
+  });
+
+  it('counts a traveller’s water point as drinkable, with its own name', () => {
+    const borehole = point('b-1', 'water', 10, { name: 'Farm borehole' });
+    expect(waterPointsFrom([borehole])).toEqual([
+      expect.objectContaining({ id: 'b-1', name: 'Farm borehole', kind: 'Water point', needsTreating: false }),
+    ]);
   });
 });
 
@@ -129,23 +125,16 @@ describe('points from Supabase and the phone', () => {
     expect(pointFromRow(row)).toEqual({ ...mine, createdBy: 'user-1' });
   });
 
-  it('shows each point once: shared, then new from OpenStreetMap, then unsent', () => {
-    const shared = [point('s1', 'butcher', 10, { source: 'OSM', osmId: 'node/1' })];
-    const fromOsm = [point('osm:node/1', 'butcher', 10, { source: 'OSM', osmId: 'node/1' }), point('osm:node/2', 'butcher', 50, { source: 'OSM', osmId: 'node/2' })];
-    const pending = [point('p1', 'firewood', 20, { pending: true })];
-    expect(mergePoints(shared, fromOsm, pending).map((p) => p.id)).toEqual(['s1', 'osm:node/2', 'p1']);
+  it('shows each point once: shared, then unsent', () => {
+    const shared = [point('s1', 'butcher', 10, { source: 'OSM', osmId: 'node/1' }), point('p0', 'firewood', 30)];
+    // p0 has uploaded since; it's still in the phone's list until the next sync.
+    const pending = [point('p0', 'firewood', 30, { pending: true }), point('p1', 'firewood', 20, { pending: true })];
+    expect(mergePoints(shared, pending).map((p) => p.id)).toEqual(['s1', 'p0', 'p1']);
   });
 
   it('keeps points within 10 km of the route', () => {
     const points = [point('near', 'butcher', 100, { coordinates: at(100, 9) }), point('far', 'butcher', 100, { coordinates: at(100, 14) })];
     expect(pointsNearRoute(line, points).map((p) => p.id)).toEqual(['near']);
-  });
-
-  it('asks Supabase for points in a box a little wider than the route', () => {
-    const bounds = routeBounds([at(0), at(600)], 12);
-    expect(bounds.minLat).toBeCloseTo(-12 / 110.5);
-    expect(bounds.maxLat).toBeCloseTo(5.4 + 12 / 110.5);
-    expect(bounds.maxLon).toBeGreaterThan(0.1);
   });
 
   it('makes ids in Supabase’s uuid format', () => {

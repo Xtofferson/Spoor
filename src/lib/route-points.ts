@@ -1,9 +1,10 @@
 /**
  * Places along a route (fuel stations, water points): where they are along it, grouping
- * nearby ones into stops, the stretches between stops, and finding them on OpenStreetMap.
+ * nearby ones into stops, and the stretches between stops. Finding them on OpenStreetMap
+ * happens on the server (supabase/functions/supplies).
  * Pure functions only, so they can be tested without a phone or a network.
  */
-import { distanceMeters, simplifyLine, type LonLat, type SurfaceShares } from './route-math';
+import { distanceMeters, type LonLat, type SurfaceShares } from './route-math';
 
 // -- Positions along a route ------------------------------------------------------
 
@@ -262,7 +263,7 @@ export function stretchesBetween(line: RouteLine, stops: { label: string; startK
   return stretches;
 }
 
-// -- Fuel and water from OpenStreetMap ------------------------------------------------
+// -- Fuel and water ------------------------------------------------------------------------
 
 export type FuelStation = Place;
 
@@ -276,149 +277,5 @@ export type WaterPoint = Place & {
   notForDrinking: boolean;
 };
 
-/** Something else found on OpenStreetMap, e.g. a butchery, in one of the supply categories. */
-export type OsmSupplyPlace = Place & {
-  category: string;
-  phone?: string;
-  openingHours?: string;
-  /** When someone last checked it on OpenStreetMap (its check_date), as `YYYY-MM-DD`. */
-  checkDate?: string;
-};
-
-/** Which supply category an OpenStreetMap place belongs to, from its tags: e.g. shop=butcher. */
-export type OsmSupplyFilter = { category: string; tags: string[] };
-
 /** Supply categories are searched further from the route than fuel and water. */
 export const SUPPLY_SEARCH_RADIUS_METERS = 10_000;
-
-export type RouteSupplies = {
-  fuel: FuelStation[];
-  water: WaterPoint[];
-  /** Towns and villages near the route, to name the stops after. */
-  settlements: Settlement[];
-  /** Places in the supply categories (butcheries, firewood…). Missing in results saved before them. */
-  supplies?: OsmSupplyPlace[];
-};
-
-/**
- * An OpenStreetMap tag as an Overpass filter: "shop=butcher" → ["shop"="butcher"]. Only
- * plain keys and values are accepted, as tags come from the categories table.
- */
-export function osmTagFilter(tag: string): string | undefined {
-  const match = /^([a-z_:]+)=([a-z_:]+)$/i.exec(tag.trim());
-  return match ? `["${match[1]}"="${match[2]}"]` : undefined;
-}
-
-/** What's searched for along the route, in OpenStreetMap tags. */
-const SUPPLY_FILTERS = [
-  '["amenity"="fuel"]',
-  '["amenity"="drinking_water"]',
-  '["amenity"="water_point"]',
-  '["man_made"="water_tap"]',
-  '["man_made"="water_well"]',
-];
-
-/** Settlements are searched a little wider than the stops, so a stop 5 km off the route still finds its town. */
-const SETTLEMENT_RADIUS_METERS = SEARCH_RADIUS_METERS + NAMED_AFTER_SETTLEMENT_KM * 1000;
-const SETTLEMENT_KINDS = ['city', 'town', 'village'];
-
-/**
- * One Overpass query for fuel stations and water points within 5 km of a route, and the
- * towns and villages near it. One query
- * rather than two, because the public servers are busy and limit how often each app asks.
- * The line is simplified first (to about 300 m), which keeps the query small without
- * moving the search area noticeably.
- */
-export function overpassSuppliesQuery(route: LonLat[], supplyFilters: OsmSupplyFilter[] = []): string {
-  const around = simplifyLine(route, 300)
-    .map(([lon, lat]) => `${lat.toFixed(5)},${lon.toFixed(5)}`)
-    .join(',');
-  const searches =
-    SUPPLY_FILTERS.map((filter) => `nwr${filter}(around:${SEARCH_RADIUS_METERS},${around});`).join('') +
-    `node["place"~"^(${SETTLEMENT_KINDS.join('|')})$"]["name"](around:${SETTLEMENT_RADIUS_METERS},${around});` +
-    supplyFilters
-      .flatMap((filter) => filter.tags.map(osmTagFilter))
-      .filter((filter) => filter !== undefined)
-      .map((filter) => `nwr${filter}(around:${SUPPLY_SEARCH_RADIUS_METERS},${around});`)
-      .join('');
-  return `[out:json][timeout:90];(${searches});out center tags;`;
-}
-
-function waterKind(tags: Record<string, string>): WaterKind | undefined {
-  if (tags.amenity === 'drinking_water') return 'Drinking water';
-  if (tags.amenity === 'water_point') return 'Water point';
-  if (tags.man_made === 'water_tap') return 'Water tap';
-  if (tags.man_made === 'water_well') return 'Well';
-  return undefined;
-}
-
-/**
- * Fuel stations and water points from an Overpass response. Places mapped both as a point
- * and as an area show up twice; those within 100 m of each other with the same name and
- * kind are kept once.
- */
-export function parseOverpassSupplies(response: any, supplyFilters: OsmSupplyFilter[] = []): RouteSupplies {
-  const fuel: FuelStation[] = [];
-  const water: WaterPoint[] = [];
-  const settlements: Settlement[] = [];
-  const supplies: OsmSupplyPlace[] = [];
-  const isDuplicate = (list: Place[], place: Place, sameKind: (other: any) => boolean) =>
-    list.some(
-      (other) =>
-        sameKind(other) &&
-        (other.name ?? other.brand) === (place.name ?? place.brand) &&
-        distanceMeters(other.coordinates, place.coordinates) < 100
-    );
-
-  for (const element of response?.elements ?? []) {
-    const lat = element.lat ?? element.center?.lat;
-    const lon = element.lon ?? element.center?.lon;
-    if (typeof lat !== 'number' || typeof lon !== 'number') continue;
-    const tags: Record<string, string> = element.tags ?? {};
-    const place: Place = {
-      id: `${element.type}/${element.id}`,
-      coordinates: [lon, lat],
-      name: tags.name || undefined,
-      brand: tags.brand || undefined,
-      town: tags['addr:city'] || tags['addr:place'] || undefined,
-    };
-
-    if (tags.place && SETTLEMENT_KINDS.includes(tags.place) && tags.name) {
-      settlements.push({ name: tags.name, coordinates: [lon, lat] });
-      continue;
-    }
-    if (tags.amenity === 'fuel') {
-      if (!isDuplicate(fuel, place, () => true)) fuel.push(place);
-      continue;
-    }
-    const category = supplyFilters.find((filter) =>
-      filter.tags.some((tag) => {
-        const [key, value] = tag.split('=');
-        return tags[key] === value;
-      })
-    )?.category;
-    if (category) {
-      const checkDate = tags.check_date ?? tags.survey_date;
-      const supply: OsmSupplyPlace = {
-        ...place,
-        category,
-        phone: tags.phone || tags['contact:phone'] || undefined,
-        openingHours: tags.opening_hours || undefined,
-        checkDate: checkDate && /^\d{4}-\d{2}-\d{2}$/.test(checkDate) ? checkDate : undefined,
-      };
-      if (!isDuplicate(supplies, supply, (other: OsmSupplyPlace) => other.category === category)) supplies.push(supply);
-      continue;
-    }
-    const kind = waterKind(tags);
-    if (!kind) continue;
-    const source = (tags.water_source ?? '').toLowerCase();
-    const point: WaterPoint = {
-      ...place,
-      kind,
-      needsTreating: kind === 'Well' || tags.natural === 'spring' || source === 'well' || source === 'spring',
-      notForDrinking: tags.drinking_water === 'no',
-    };
-    if (!isDuplicate(water, point, (other: WaterPoint) => other.kind === point.kind)) water.push(point);
-  }
-  return { fuel, water, settlements, supplies };
-}

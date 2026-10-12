@@ -1,8 +1,9 @@
 /**
- * Supplies along a route: butcheries, firewood, veterinary checkpoints and any other kinds
- * added to Supabase's supply_categories table later. Pure functions only, so they can be
- * tested without a phone or a network.
+ * Supplies along a route: fuel, water, butcheries, firewood, veterinary checkpoints and any
+ * other kinds added to Supabase's supply_categories table later. Pure functions only, so
+ * they can be tested without a phone or a network.
  */
+import type { PointDetails, WaterKindKey } from '../../supabase/functions/supplies/osm';
 import { t as currentT, type Translate } from './i18n';
 import type { LonLat } from './route-math';
 import {
@@ -10,12 +11,13 @@ import {
   stopsAlong,
   stretchesBetween,
   SUPPLY_SEARCH_RADIUS_METERS,
-  type OsmSupplyFilter,
-  type OsmSupplyPlace,
+  type FuelStation,
   type PlaceStop,
   type RouteLine,
   type Settlement,
   type Stretch,
+  type WaterKind,
+  type WaterPoint,
 } from './route-points';
 
 // -- Categories ---------------------------------------------------------------------
@@ -46,6 +48,26 @@ export type SupplyCategory = {
  * on a first launch offline). New categories come from the table, not from here.
  */
 export const DEFAULT_CATEGORIES: SupplyCategory[] = [
+  {
+    id: 'fuel',
+    label: 'Fuel',
+    noun: 'fuel station',
+    emoji: '⛽',
+    color: '#D9902F',
+    osmTags: ['amenity=fuel'],
+    userCanAdd: true,
+    sort: 0,
+  },
+  {
+    id: 'water',
+    label: 'Water',
+    noun: 'water point',
+    emoji: '💧',
+    color: '#3E7CA6',
+    osmTags: ['amenity=drinking_water', 'amenity=water_point', 'man_made=water_tap', 'man_made=water_well'],
+    userCanAdd: true,
+    sort: 1,
+  },
   {
     id: 'butcher',
     label: 'Butcher',
@@ -129,11 +151,13 @@ export function categoryText(category: SupplyCategory, t: Translate = currentT) 
   };
 }
 
-/** What to look for on OpenStreetMap for the categories that have tags. */
-export function osmFilters(categories: SupplyCategory[]): OsmSupplyFilter[] {
-  return categories
-    .filter((category) => category.osmTags.length > 0)
-    .map((category) => ({ category: category.id, tags: category.osmTags }));
+/** Fuel and water have their own planning (range, days of water); the rest share the supply warnings. */
+export const FUEL = 'fuel';
+export const WATER = 'water';
+
+/** The categories planned as supplies: everything but fuel and water. */
+export function supplyCategories(categories: SupplyCategory[]): SupplyCategory[] {
+  return categories.filter((category) => category.id !== FUEL && category.id !== WATER);
 }
 
 // -- Points -------------------------------------------------------------------------
@@ -160,6 +184,8 @@ export type SupplyPoint = {
   pending?: boolean;
   /** How many times uploading it has failed, while it's pending. */
   uploadAttempts?: number;
+  /** Extra facts from OpenStreetMap, e.g. a fuel station's brand or what kind of water point it is. */
+  details?: PointDetails;
 };
 
 export type PointRow = {
@@ -176,6 +202,7 @@ export type PointRow = {
   osm_id: string | null;
   last_confirmed: string | null;
   created_by: string | null;
+  details?: PointDetails | null;
 };
 
 export function pointFromRow(row: PointRow): SupplyPoint {
@@ -192,6 +219,7 @@ export function pointFromRow(row: PointRow): SupplyPoint {
     osmId: row.osm_id ?? undefined,
     lastConfirmed: row.last_confirmed ?? undefined,
     createdBy: row.created_by ?? undefined,
+    details: row.details ?? undefined,
   };
 }
 
@@ -214,74 +242,56 @@ export function rowFromPoint(point: SupplyPoint, userId: string): PointRow {
   };
 }
 
-/** A place found on OpenStreetMap, as a supply point (before it has a row in Supabase). */
-export function pointFromOsm(place: OsmSupplyPlace, categories: SupplyCategory[]): SupplyPoint {
-  const label = categories.find((category) => category.id === place.category)?.label ?? 'Supplies';
-  return {
-    id: `osm:${place.id}`,
-    category: place.category,
-    name: place.name ?? place.brand ?? label,
-    coordinates: place.coordinates,
-    phone: place.phone,
-    openingHours: place.openingHours,
-    source: 'OSM',
-    osmId: place.id,
-    lastConfirmed: place.checkDate,
-  };
+/** The points to show, each once: the ones in Supabase, and ones added on this phone waiting to upload. */
+export function mergePoints(shared: SupplyPoint[], pending: SupplyPoint[]): SupplyPoint[] {
+  const ids = new Set(shared.map((point) => point.id));
+  return [...shared, ...pending.filter((point) => !ids.has(point.id))];
 }
 
-/** OpenStreetMap places as the seed_osm_supply_points function takes them. */
-export function osmSeedRows(points: SupplyPoint[]) {
-  return points
-    .filter((point) => point.source === 'OSM' && point.osmId)
-    .map((point) => ({
-      category: point.category,
-      name: point.name,
-      latitude: point.coordinates[1],
-      longitude: point.coordinates[0],
-      phone: point.phone ?? '',
-      opening_hours: point.openingHours ?? '',
-      osm_id: point.osmId,
-      last_confirmed: point.lastConfirmed ?? '',
-    }));
+/** A town or village row from Supabase. */
+export type SettlementRow = { name: string; latitude: number; longitude: number };
+
+export function settlementFromRow(row: SettlementRow): Settlement {
+  return { name: row.name, coordinates: [row.longitude, row.latitude] };
 }
 
 /**
- * All the points to show, each once: ones saved in Supabase, ones just found on
- * OpenStreetMap that aren't there yet, and ones added on this phone waiting to upload.
+ * The fuel stations among some points. A station from OpenStreetMap keeps its OpenStreetMap
+ * id, which is what chosen fuel stops remember.
  */
-export function mergePoints(shared: SupplyPoint[], fromOsm: SupplyPoint[], pending: SupplyPoint[]): SupplyPoint[] {
-  const known = new Set(shared.map((point) => point.osmId).filter(Boolean));
-  const ids = new Set(shared.map((point) => point.id));
-  return [
-    ...shared,
-    ...fromOsm.filter((point) => !known.has(point.osmId)),
-    ...pending.filter((point) => !ids.has(point.id)),
-  ];
+export function fuelStationsFrom(points: SupplyPoint[]): FuelStation[] {
+  return points
+    .filter((point) => point.category === FUEL)
+    .map((point) => ({
+      id: point.osmId ?? point.id,
+      coordinates: point.coordinates,
+      // A name made up from the brand or category isn't a real name.
+      name: point.details?.named === false ? undefined : point.name,
+      brand: point.details?.brand,
+      town: point.details?.town,
+    }));
 }
 
-/** The box around a route, widened by `marginKm`, for asking Supabase for points near it. */
-export function routeBounds(points: LonLat[], marginKm: number) {
-  let minLon = Infinity;
-  let minLat = Infinity;
-  let maxLon = -Infinity;
-  let maxLat = -Infinity;
-  for (const [lon, lat] of points) {
-    minLon = Math.min(minLon, lon);
-    maxLon = Math.max(maxLon, lon);
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
-  }
-  const latMargin = marginKm / 110.5;
-  // Degrees of longitude shrink away from the equator; use the widest the box reaches.
-  const widestLat = Math.max(Math.abs(minLat), Math.abs(maxLat));
-  const lonMargin = marginKm / (111.3 * Math.max(0.1, Math.cos((widestLat * Math.PI) / 180)));
-  return {
-    minLat: minLat - latMargin,
-    maxLat: maxLat + latMargin,
-    minLon: minLon - lonMargin,
-    maxLon: maxLon + lonMargin,
-  };
+const WATER_KINDS: Record<WaterKindKey, WaterKind> = {
+  drinking: 'Drinking water',
+  point: 'Water point',
+  tap: 'Water tap',
+  well: 'Well',
+};
+
+/** The water points among some points. Ones added by travellers count as water points. */
+export function waterPointsFrom(points: SupplyPoint[]): WaterPoint[] {
+  return points
+    .filter((point) => point.category === WATER)
+    .map((point) => ({
+      id: point.osmId ?? point.id,
+      coordinates: point.coordinates,
+      name: point.details?.named === false ? undefined : point.name,
+      town: point.details?.town,
+      kind: WATER_KINDS[point.details?.water_kind ?? 'point'],
+      needsTreating: point.details?.needs_treating ?? false,
+      notForDrinking: point.details?.not_for_drinking ?? false,
+    }));
 }
 
 /** Points within 10 km of the route. */

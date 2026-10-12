@@ -2,7 +2,7 @@
 
 Reviewed on 12 October 2026, at commit `3183d30` (navigation and Trips redesign). No code was changed for this review.
 
-**Progress:** ✅ #1, #2, #3, #5 and #7 are fixed.
+**Progress:** ✅ #1, #2, #3, #5, #7, #14 and #17 are fixed.
 
 **Effort:** **S** = under 2 hours · **M** = half a day to a day · **L** = several days.
 
@@ -44,14 +44,14 @@ The findings below are what to fix next.
 | # | Finding | One-line fix | Effort |
 |---|---|---|---|
 | 13 | **A place can point at someone else's photo.** `supply_points.photo_path` isn't checked, so a user can set it to another user's photo. | Add `check (photo_path is null or photo_path like created_by::text \|\| '/%')`. | S |
-| 14 | **Overpass is called from every phone.** That's fine for a few users, but against the public servers' fair-use rules at scale, and their answers take 10–90 s. | Fetch Overpass server-side (Edge Function + the existing `supply_points` table) and let phones read Supabase. This also fixes #3 and helps ratings (#33). | M |
+| 14 | ✅ **Overpass is called from every phone.** That's fine for a few users, but against the public servers' fair-use rules at scale, and their answers take 10–90 s. | Fetch Overpass server-side (Edge Function + the existing `supply_points` table) and let phones read Supabase. This also fixes #3 and helps ratings (#33). | M |
 
 ### Inefficiencies (battery, data, speed)
 | # | Finding | One-line fix | Effort |
 |---|---|---|---|
 | 15 | **Too much is redone on every trip save.** The route depends on the whole trip, so ticking a fuel town rebuilds the route line and re-finds every fuel, water and supply place. `locateOnRoute` (route points × places) runs about 6 times per change, and the screen stutters on long trips. | Depend on `trip.stops` only, find each place on the route once and reuse it, and use a 100 m simplified line for distances. | M |
 | 16 | **Sync downloads every trip each time.** It runs on each foreground and each edit, including chosen-route geometry. | Download only trips with `updated_at` after the last sync (needs #4's server timestamps). | S |
-| 17 | **Supply points are fetched for a whole rectangle.** A long diagonal route covers most of a country, and the query allows up to 5,000 rows. | Add a PostGIS RPC that returns points within 10 km of a simplified route line. | M |
+| 17 | ✅ **Supply points are fetched for a whole rectangle.** A long diagonal route covers most of a country, and the query allows up to 5,000 rows. | Add a PostGIS RPC that returns points within 10 km of a simplified route line. | M |
 | 18 | **Supply points are fetched again every time a trip opens,** and on the Trips home screen. | Reuse saved points for a day unless you pull to refresh or add a place. | S |
 | 19 | **Many map markers are slow.** Supply markers are custom views (one timer each); hundreds of them are slow on Android and drain battery while the map moves. | Use small image markers per category (like fuel and water) and cluster when zoomed out. | M |
 | 20 | **Unused packages:** `expo-device`, `expo-glass-effect`, `expo-web-browser`. | Remove them with `npm uninstall`. | S |
