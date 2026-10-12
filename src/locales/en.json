@@ -254,7 +254,8 @@
       "one": "{{count}} stop",
       "other": "{{count}} stops"
     },
-    "openHint": "Opens the trip"
+    "openHint": "Opens the trip",
+    "conflictCopy": "{{name}} (copy from this phone)"
   },
   "trip": {
     "notFoundTitle": "Trip not found",

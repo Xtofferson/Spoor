@@ -254,7 +254,8 @@
       "one": "{{count}} stoppunt",
       "other": "{{count}} stoppunte"
     },
-    "openHint": "Maak die reis oop"
+    "openHint": "Maak die reis oop",
+    "conflictCopy": "{{name}} (kopie van hierdie foon)"
   },
   "trip": {
     "notFoundTitle": "Reis nie gevind nie",

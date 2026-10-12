@@ -39,7 +39,13 @@ export type Trip = {
   /** Towns (fuel stops) chosen to fill up at. Fuel is planned between these, or every stop if none. */
   fuelStops?: FuelStopChoice[];
   createdAt: number;
+  /** When it was last edited, by the phone's clock; used for sorting. */
   updatedAt: number;
+  /**
+   * The server's updated_at for the version this phone last downloaded or uploaded. Supabase
+   * only accepts changes based on its latest version. Missing until the trip first syncs.
+   */
+  serverUpdatedAt?: string;
   /** True when the trip has changes on this phone that haven't been uploaded to Supabase yet. */
   dirty?: boolean;
   /**
