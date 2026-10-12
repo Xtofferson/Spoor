@@ -89,6 +89,24 @@ export function locateOnRoute(line: RouteLine, point: LonLat): { alongKm: number
   return best;
 }
 
+/** The point a distance along the route, in km from the start. */
+export function pointAtKm(line: RouteLine, alongKm: number): LonLat {
+  const { points, km } = line;
+  if (points.length === 0) return [0, 0];
+  if (alongKm <= km[0]) return points[0];
+  for (let i = 1; i < points.length; i++) {
+    if (km[i] >= alongKm) {
+      const span = km[i] - km[i - 1];
+      const t = span > 0 ? (alongKm - km[i - 1]) / span : 0;
+      return [
+        points[i - 1][0] + t * (points[i][0] - points[i - 1][0]),
+        points[i - 1][1] + t * (points[i][1] - points[i - 1][1]),
+      ];
+    }
+  }
+  return points[points.length - 1];
+}
+
 /** Driving hours between two points along the route, from each leg's estimated time. */
 export function hoursBetween(line: RouteLine, startKm: number, endKm: number): number {
   let hours = 0;

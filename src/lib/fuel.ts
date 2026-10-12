@@ -27,8 +27,12 @@ export type Consumption = {
 
 export type Terrain = keyof Consumption;
 
+export type FuelType = 'diesel' | 'petrol';
+
 export type Vehicle = {
   name: string;
+  /** Missing on vehicles saved before it was asked for; those count as diesel. */
+  fuelType?: FuelType;
   mainTankLitres: number;
   /** All jerry cans together. */
   jerryCanLitres: number;
@@ -73,6 +77,7 @@ export function legFuelLitres(leg: { distance: number; surface: SurfaceShares },
 
 export type VehicleForm = {
   name: string;
+  fuelType: FuelType;
   mainTankLitres: string;
   jerryCanLitres: string;
   tar: string;
@@ -123,6 +128,7 @@ export function readVehicleForm(
 
   const vehicle = {
     name,
+    fuelType: form.fuelType,
     mainTankLitres: litres('mainTankLitres', 10, 1000),
     jerryCanLitres: litres('jerryCanLitres', 0, 1000),
     consumption: { tar: rate('tar'), gravel: rate('gravel'), sand: rate('sand') },
@@ -133,9 +139,12 @@ export function readVehicleForm(
 
 /** The form's starting values for a saved vehicle, or empty. */
 export function vehicleToForm(vehicle?: Vehicle): VehicleForm {
-  if (!vehicle) return { name: '', mainTankLitres: '', jerryCanLitres: '', tar: '', gravel: '', sand: '', waterLitres: '' };
+  if (!vehicle) {
+    return { name: '', fuelType: 'diesel', mainTankLitres: '', jerryCanLitres: '', tar: '', gravel: '', sand: '', waterLitres: '' };
+  }
   return {
     name: vehicle.name,
+    fuelType: vehicle.fuelType ?? 'diesel',
     mainTankLitres: String(vehicle.mainTankLitres),
     jerryCanLitres: vehicle.jerryCanLitres ? String(vehicle.jerryCanLitres) : '',
     tar: String(vehicle.consumption.tar),

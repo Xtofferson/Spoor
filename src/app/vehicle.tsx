@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { ActionBar, Button, Card, Field } from '@/components/ui';
+import { ActionBar, Button, Card, Chip, Field, FieldLabel } from '@/components/ui';
 import { Fonts, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -11,6 +11,7 @@ import {
   RESERVE_SHARE,
   safeRangeKm,
   vehicleToForm,
+  type FuelType,
   type Terrain,
   type VehicleForm,
 } from '@/lib/fuel';
@@ -18,6 +19,7 @@ import { useT } from '@/lib/i18n';
 import { saveVehicle, useVehicle } from '@/lib/vehicle';
 
 const TERRAINS: Terrain[] = ['tar', 'gravel', 'sand'];
+const FUEL_TYPES: FuelType[] = ['diesel', 'petrol'];
 
 function close() {
   if (router.canGoBack()) router.back();
@@ -34,7 +36,7 @@ export default function VehicleScreen() {
   const result = readVehicleForm(form, t);
   const errors = triedSaving ? (result.errors ?? {}) : {};
 
-  function set(key: keyof VehicleForm) {
+  function set(key: Exclude<keyof VehicleForm, 'fuelType'>) {
     return (value: string) => setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -64,6 +66,17 @@ export default function VehicleScreen() {
             placeholder={t('vehicle.namePlaceholder')}
             error={errors.name}
           />
+          <FieldLabel>{t('vehicle.fuelType')}</FieldLabel>
+          <View style={styles.chips} accessibilityRole="radiogroup">
+            {FUEL_TYPES.map((type) => (
+              <Chip
+                key={type}
+                label={t(`fuel.types.${type}`)}
+                selected={form.fuelType === type}
+                onPress={() => setForm((current) => ({ ...current, fuelType: type }))}
+              />
+            ))}
+          </View>
         </Section>
 
         <Section title={t('vehicle.capacity')}>
@@ -166,6 +179,10 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 12,
+  },
+  chips: {
+    flexDirection: 'row',
+    gap: Spacing.two,
   },
   mono: {
     fontFamily: Fonts.mono,

@@ -67,7 +67,8 @@
     "water": "Drinkwater wat jy dra",
     "safeRange": "Veilige reikafstand",
     "safeRangeNote": "Tenk en kanne, met {{percent}}% in reserwe.",
-    "save": "Stoor voertuig"
+    "save": "Stoor voertuig",
+    "fuelType": "Brandstof"
   },
   "fuel": {
     "station": "Vulstasie",
@@ -102,7 +103,15 @@
     "fillHere": "Maak hier vol",
     "sinceStart": "{{km}} km sedert jy {{place}} verlaat",
     "sinceFill": "{{km}} km sedert jy by {{place}} volgemaak het",
-    "ofRange": "{{percent}}% van jou veilige reikafstand"
+    "ofRange": "{{percent}}% van jou veilige reikafstand",
+    "types": {
+      "diesel": "Diesel",
+      "petrol": "Petrol"
+    },
+    "typeNames": {
+      "diesel": "diesel",
+      "petrol": "petrol"
+    }
   },
   "water": {
     "kind": {
@@ -241,7 +250,8 @@
     "routeOptions": "Roete-opsies",
     "vehicle": "Voertuig",
     "addPlace": "Voeg ’n plek by",
-    "place": "Plek"
+    "place": "Plek",
+    "fuelPrices": "Brandstofpryse"
   },
   "sync": {
     "idle": "",
@@ -383,7 +393,9 @@
     "uploadFirst": "Laai eers op",
     "signOutAnyway": "Meld tog af",
     "stillUnsyncedTitle": "Kon nie alles oplaai nie",
-    "stillUnsyncedMessage": "Dalk is daar geen sein nie. Steeds net op hierdie foon:\n{{list}}\n\nProbeer weer wanneer jy aanlyn is, of meld tog af; hulle word opgelaai wanneer jy weer hier aanmeld."
+    "stillUnsyncedMessage": "Dalk is daar geen sein nie. Steeds net op hierdie foon:\n{{list}}\n\nProbeer weer wanneer jy aanlyn is, of meld tog af; hulle word opgelaai wanneer jy weer hier aanmeld.",
+    "fuelPrices": "Brandstofpryse",
+    "fuelPricesHint": "Per land, vir jou reise se brandstofbegrotings"
   },
   "tripForm": {
     "origin": "Vertrekpunt",
@@ -505,6 +517,48 @@
     "noFuelFor": "Geen vulstasie vir {{km}} km nie",
     "waterShort": "Nie genoeg water vir {{days}} nie",
     "onRoute": "{{label}} op die roete",
-    "noSupplyFor": "Geen {{noun}} vir {{km}} km nie"
+    "noSupplyFor": "Geen {{noun}} vir {{km}} km nie",
+    "fuelCost": "≈ {{amount}} brandstof"
+  },
+  "countries": {
+    "ZA": "Suid-Afrika",
+    "NA": "Namibië",
+    "BW": "Botswana",
+    "ZW": "Zimbabwe",
+    "ZM": "Zambië",
+    "MZ": "Mosambiek",
+    "LS": "Lesotho",
+    "SZ": "Eswatini",
+    "MW": "Malawi",
+    "AO": "Angola",
+    "TZ": "Tanzanië"
+  },
+  "fuelBudget": {
+    "title": "Brandstofbegroting",
+    "editPrices": "Brandstofpryse",
+    "litres": "≈ {{litres}} L {{fuel}}",
+    "line": "{{litres}} L × R{{price}}",
+    "elsewhere": "Buite Suider-Afrika",
+    "fallback": "Nog geen prys vir {{countries}} nie, so Suid-Afrika s’n word gebruik. Stel dit onder Brandstofpryse.",
+    "howFuelStops": "Volgens jou voertuig se verbruik op elke soort pad, volgemaak by jou brandstofstops.",
+    "howStops": "Volgens jou voertuig se verbruik op elke soort pad, volgemaak by elke stop totdat brandstofstops gevind is.",
+    "estimates": "Pryse is skattings van {{date}}.",
+    "ownPrices": "Met die pryse wat jy gestel het."
+  },
+  "fuelPrices": {
+    "intro": "Rand per liter, vir elke reis se brandstofbegroting. Spoor begin met skattings van {{date}}; tik wat jy betaal om dit eerder te gebruik.",
+    "estimate": "Skatting: R{{price}}",
+    "noEstimate": "Geen skatting nie: Suid-Afrika s’n word gebruik",
+    "reset": "Vee my pryse uit",
+    "error": "Tik ’n prys soos 31,50"
+  },
+  "fuelPlan": {
+    "title": "Jou brandstofplan",
+    "noStops": "Nog geen brandstof langs hierdie roete gevind nie.",
+    "noneChosen": "Jy het nog nie gekies waar om vol te maak nie. Tot dan tel elke plek met brandstof langs die pad.",
+    "choose": "Kies brandstofstops",
+    "change": "Verander brandstofstops",
+    "done": "Klaar",
+    "toEnd": "Dan {{km}} km na {{place}}"
   }
 }

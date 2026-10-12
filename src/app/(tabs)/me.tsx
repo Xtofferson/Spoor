@@ -137,6 +137,18 @@ export default function MeScreen() {
             </Row>
           </Section>
 
+          <Section title={t('me.fuelPrices')}>
+            <Row
+              icon={{ ios: 'fuelpump.fill', android: 'local_gas_station', web: 'local_gas_station' }}
+              onPress={() => router.push('/fuel-prices')}
+              label={t('me.fuelPrices')}>
+              <ThemedText>{t('me.fuelPrices')}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {t('me.fuelPricesHint')}
+              </ThemedText>
+            </Row>
+          </Section>
+
           <Section title={t('me.language')}>
             <View accessibilityRole="radiogroup">
               {languages.map((option, index) => {

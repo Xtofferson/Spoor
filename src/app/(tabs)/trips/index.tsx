@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { BorderWidth, BottomTabInset, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import { formatRand } from '@/lib/fuel-budget';
 import { dateLocale, useLanguage, useT, type Translate } from '@/lib/i18n';
 import { categoryText } from '@/lib/supply-points';
 import { TripPlanProvider, useTripPlan } from '@/lib/trip-plan';
@@ -121,6 +122,7 @@ function NextTripCard() {
   if (trip.endDate) meta.push(t('trips.days', { count: tripDays(trip.startDate, trip.endDate) }));
   if (route) meta.push(`${Math.round(route.distance / 1000).toLocaleString('en-US')} km`);
   if (found) meta.push(t('supplies.fuelStops', { count: plan.plannedFuelStops.length }));
+  if (plan.budget) meta.push(t('home.fuelCost', { amount: formatRand(plan.budget.total) }));
   const warnings = tripWarnings(plan, t);
   const date = fromDateString(trip.startDate).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   const open = () => router.push({ pathname: '/trips/[id]', params: { id: trip.id } });

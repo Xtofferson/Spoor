@@ -20,9 +20,13 @@ import {
   type Terrain,
   type Vehicle,
 } from '@/lib/fuel';
+import type { CountryCode } from '@/lib/countries';
+import { formatRand, type FuelBudget } from '@/lib/fuel-budget';
+import { ESTIMATES_DATE } from '@/lib/fuel-prices';
 import { dateLocale, useT, type Translate } from '@/lib/i18n';
 import type { SavedSupplies, SuppliesState } from '@/lib/route-supplies';
 import { categoryText, gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan } from '@/lib/supply-points';
+import { fromDateString } from '@/lib/trips';
 import {
   formatDays,
   stopNeedsTreating,
@@ -175,6 +179,25 @@ export function FuelStretchList({
  * Every place with fuel along the route. Tick the towns you'll fill up at, and fuel is
  * planned between those.
  */
+/** "260 km since leaving Joburg · 41% of your safe range" */
+function sinceFillText(row: FuelStopRow, t: Translate): string {
+  return [
+    row.sinceStart
+      ? t('fuel.sinceStart', { km: km(row.sinceKm), place: row.since })
+      : t('fuel.sinceFill', { km: km(row.sinceKm), place: row.since }),
+    row.sinceShare !== undefined && t('fuel.ofRange', { percent: Math.round(row.sinceShare * 100) }),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** Red past the safe range, ochre when it's tight, as on the stretches between fuel. */
+function useShareColor() {
+  const theme = useTheme();
+  return (share?: number) =>
+    share === undefined || share <= TIGHT_SHARE ? theme.textSecondary : share > 1 ? theme.danger : theme.warningText;
+}
+
 export function FuelStopPicker({
   rows,
   onToggleStop,
@@ -184,11 +207,9 @@ export function FuelStopPicker({
 }) {
   const theme = useTheme();
   const t = useT();
+  const sinceColor = useShareColor();
   const chosenCount = rows.filter((row) => row.choice).length;
   if (rows.length === 0) return null;
-  // Red past the safe range, ochre when it's tight, as on the stretches between fuel.
-  const sinceColor = (share?: number) =>
-    share === undefined || share <= TIGHT_SHARE ? theme.textSecondary : share > 1 ? theme.danger : theme.warningText;
 
   return (
     <View style={styles.list}>
@@ -204,17 +225,7 @@ export function FuelStopPicker({
               ? t('fuel.atPlace', { place: row.afterStop })
               : t('fuel.kmFrom', { km: km(row.afterStopKm), place: row.afterStop });
           // Once a town is ticked, each row also shows how far it is since the last fill-up.
-          const sinceFill =
-            chosenCount > 0
-              ? [
-                  row.sinceStart
-                    ? t('fuel.sinceStart', { km: km(row.sinceKm), place: row.since })
-                    : t('fuel.sinceFill', { km: km(row.sinceKm), place: row.since }),
-                  row.sinceShare !== undefined && t('fuel.ofRange', { percent: Math.round(row.sinceShare * 100) }),
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : undefined;
+          const sinceFill = chosenCount > 0 ? sinceFillText(row, t) : undefined;
           return (
             <Pressable
               key={`${row.stop.label}-${row.km}`}
@@ -259,6 +270,150 @@ function Tick({ checked }: { checked: boolean }) {
       size={24}
       tintColor={checked ? theme.accent : theme.textSecondary}
     />
+  );
+}
+
+/**
+ * The top of the Supplies tab: the towns chosen to fill up at, in route order, with how far
+ * each is since the last fill-up, the stretch on to the end, and the fuel budget. The full
+ * list of towns opens with "Change fuel stops".
+ */
+export function FuelPlanCard({
+  searched,
+  rows,
+  stretches,
+  budget,
+  vehicle,
+  picking,
+  onTogglePicking,
+}: {
+  /** Whether fuel along the route has been looked up (or was saved), so "none found" is true. */
+  searched: boolean;
+  rows: FuelStopRow[];
+  stretches: FuelStretch[];
+  budget?: FuelBudget;
+  vehicle?: Vehicle;
+  /** Whether the list of every town with fuel is open below the card. */
+  picking: boolean;
+  onTogglePicking: () => void;
+}) {
+  const t = useT();
+  const shareColor = useShareColor();
+  const chosen = rows.filter((row) => row.choice);
+  // With towns chosen, the last stretch runs from the last of them to the trip's end.
+  const last = chosen.length > 0 ? stretches[stretches.length - 1] : undefined;
+
+  return (
+    <Card outlined>
+      <ThemedText type="heading">{t('fuelPlan.title')}</ThemedText>
+      {rows.length === 0 ? (
+        searched && (
+          <ThemedText type="small" themeColor="textSecondary">
+            {t('fuelPlan.noStops')}
+          </ThemedText>
+        )
+      ) : chosen.length === 0 ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          {t('fuelPlan.noneChosen')}
+        </ThemedText>
+      ) : (
+        <View>
+          {chosen.map((row, index) => (
+            <View key={`${row.stop.label}-${row.km}`} style={styles.planStop}>
+              <View style={styles.planNumber}>
+                <ThemedText type="smallBold" themeColor="textSecondary">
+                  {index + 1}
+                </ThemedText>
+              </View>
+              <View style={styles.flex}>
+                <ThemedText style={styles.town}>{row.stop.label}</ThemedText>
+                <ThemedText type="small" style={[styles.since, { color: shareColor(row.sinceShare) }]}>
+                  {sinceFillText(row, t)}
+                </ThemedText>
+              </View>
+            </View>
+          ))}
+          {last && (
+            <ThemedText type="small" style={[styles.since, { color: shareColor(vehicle && last.shareOfRange) }]}>
+              {[
+                t('fuelPlan.toEnd', { km: km(last.distanceKm), place: last.to }),
+                vehicle && t('fuel.ofRange', { percent: Math.round(last.shareOfRange * 100) }),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </ThemedText>
+          )}
+        </View>
+      )}
+
+      {budget && vehicle && <BudgetSection budget={budget} vehicle={vehicle} hasFuelStops={stretches.length > 0} />}
+
+      {rows.length > 0 && (
+        <Button
+          compact
+          variant={chosen.length === 0 && !picking ? 'primary' : 'outline'}
+          label={picking ? t('fuelPlan.done') : chosen.length === 0 ? t('fuelPlan.choose') : t('fuelPlan.change')}
+          onPress={onTogglePicking}
+        />
+      )}
+    </Card>
+  );
+}
+
+/**
+ * What the trip's fuel costs, per country: the vehicle's consumption on each road surface,
+ * bought at the fuel stops (or each trip stop until those are found), at local prices.
+ */
+function BudgetSection({ budget, vehicle, hasFuelStops }: { budget: FuelBudget; vehicle: Vehicle; hasFuelStops: boolean }) {
+  const theme = useTheme();
+  const t = useT();
+  const fuel = vehicle.fuelType ?? 'diesel';
+  const country = (code?: CountryCode) => (code ? t(`countries.${code}`) : t('fuelBudget.elsewhere'));
+  const guessed = budget.lines.filter((line) => line.source === 'fallback').map((line) => country(line.country));
+  const estimated = budget.lines.some((line) => line.source === 'estimate');
+  const date = fromDateString(ESTIMATES_DATE).toLocaleDateString(dateLocale(), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  return (
+    <View style={[styles.budget, { borderTopColor: theme.borderSoft }]}>
+      <View style={styles.titleRow}>
+        <ThemedText type="smallBold" themeColor="textSecondary">
+          {t('fuelBudget.title')}
+        </ThemedText>
+        <TextButton label={t('fuelBudget.editPrices')} onPress={() => router.push('/fuel-prices')} />
+      </View>
+      <View style={styles.bigRow}>
+        <ThemedText style={styles.big}>{formatRand(budget.total)}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.shrink}>
+          {t('fuelBudget.litres', { litres: km(budget.litres), fuel: t(`fuel.typeNames.${fuel}`) })}
+        </ThemedText>
+      </View>
+      {budget.lines.map((line) => (
+        <View key={line.country ?? 'elsewhere'} style={styles.budgetRow}>
+          <View style={styles.flex}>
+            <ThemedText style={styles.town}>{country(line.country)}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.mono}>
+              {t('fuelBudget.line', { litres: km(line.litres), price: line.pricePerLitre.toFixed(2) })}
+            </ThemedText>
+          </View>
+          <ThemedText style={styles.mono}>{formatRand(line.cost)}</ThemedText>
+        </View>
+      ))}
+      {guessed.length > 0 && (
+        <View style={[styles.advice, { backgroundColor: theme.warningBackground }]}>
+          <ThemedText type="small" style={{ color: theme.warningText }}>
+            {t('fuelBudget.fallback', { countries: guessed.join(', ') })}
+          </ThemedText>
+        </View>
+      )}
+      <ThemedText type="small" themeColor="textSecondary">
+        {hasFuelStops ? t('fuelBudget.howFuelStops') : t('fuelBudget.howStops')}{' '}
+        {estimated ? t('fuelBudget.estimates', { date }) : t('fuelBudget.ownPrices')}
+      </ThemedText>
+    </View>
   );
 }
 
@@ -674,6 +829,27 @@ const styles = StyleSheet.create({
   },
   town: {
     fontWeight: 600,
+  },
+  planStop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  planNumber: {
+    width: 20,
+    paddingTop: 2,
+    alignItems: 'center',
+  },
+  budget: {
+    gap: 10,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
   },
   since: {
     fontWeight: 500,

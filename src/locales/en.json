@@ -67,7 +67,8 @@
     "water": "Drinking water carried",
     "safeRange": "Safe range",
     "safeRangeNote": "Tank and jerry cans, keeping {{percent}}% in reserve.",
-    "save": "Save vehicle"
+    "save": "Save vehicle",
+    "fuelType": "Fuel"
   },
   "fuel": {
     "station": "Fuel station",
@@ -102,7 +103,15 @@
     "fillHere": "Fill up here",
     "sinceStart": "{{km}} km since leaving {{place}}",
     "sinceFill": "{{km}} km since filling up at {{place}}",
-    "ofRange": "{{percent}}% of your safe range"
+    "ofRange": "{{percent}}% of your safe range",
+    "types": {
+      "diesel": "Diesel",
+      "petrol": "Petrol"
+    },
+    "typeNames": {
+      "diesel": "diesel",
+      "petrol": "petrol"
+    }
   },
   "water": {
     "kind": {
@@ -241,7 +250,8 @@
     "routeOptions": "Route options",
     "vehicle": "Vehicle",
     "addPlace": "Add a place",
-    "place": "Place"
+    "place": "Place",
+    "fuelPrices": "Fuel prices"
   },
   "sync": {
     "idle": "",
@@ -383,7 +393,9 @@
     "uploadFirst": "Upload first",
     "signOutAnyway": "Sign out anyway",
     "stillUnsyncedTitle": "Couldn’t upload everything",
-    "stillUnsyncedMessage": "Maybe there’s no signal. Still only on this phone:\n{{list}}\n\nTry again when you’re online, or sign out anyway; they’ll upload when you sign in here again."
+    "stillUnsyncedMessage": "Maybe there’s no signal. Still only on this phone:\n{{list}}\n\nTry again when you’re online, or sign out anyway; they’ll upload when you sign in here again.",
+    "fuelPrices": "Fuel prices",
+    "fuelPricesHint": "Per country, for your trips’ fuel budgets"
   },
   "tripForm": {
     "origin": "Origin",
@@ -505,6 +517,48 @@
     "noFuelFor": "No fuel for {{km}} km",
     "waterShort": "Not enough water for {{days}}",
     "onRoute": "{{label}} on the route",
-    "noSupplyFor": "No {{noun}} for {{km}} km"
+    "noSupplyFor": "No {{noun}} for {{km}} km",
+    "fuelCost": "≈ {{amount}} fuel"
+  },
+  "countries": {
+    "ZA": "South Africa",
+    "NA": "Namibia",
+    "BW": "Botswana",
+    "ZW": "Zimbabwe",
+    "ZM": "Zambia",
+    "MZ": "Mozambique",
+    "LS": "Lesotho",
+    "SZ": "Eswatini",
+    "MW": "Malawi",
+    "AO": "Angola",
+    "TZ": "Tanzania"
+  },
+  "fuelBudget": {
+    "title": "Fuel budget",
+    "editPrices": "Fuel prices",
+    "litres": "≈ {{litres}} L of {{fuel}}",
+    "line": "{{litres}} L × R{{price}}",
+    "elsewhere": "Outside southern Africa",
+    "fallback": "No price for {{countries}} yet, so South Africa’s is used. Set it under Fuel prices.",
+    "howFuelStops": "From your vehicle’s consumption on each road surface, filled up at your fuel stops.",
+    "howStops": "From your vehicle’s consumption on each road surface, filled up at each stop until fuel stops are found.",
+    "estimates": "Prices are estimates from {{date}}.",
+    "ownPrices": "Using the prices you set."
+  },
+  "fuelPrices": {
+    "intro": "Rand per litre, used for each trip’s fuel budget. Spoor starts with estimates from {{date}}; type what you pay to use that instead.",
+    "estimate": "Estimate: R{{price}}",
+    "noEstimate": "No estimate: South Africa’s is used",
+    "reset": "Clear my prices",
+    "error": "Enter a price like 31.50"
+  },
+  "fuelPlan": {
+    "title": "Your fuel plan",
+    "noStops": "No fuel found along this route yet.",
+    "noneChosen": "You haven’t chosen where to fill up yet. Until you do, every place with fuel along the way counts.",
+    "choose": "Choose fuel stops",
+    "change": "Change fuel stops",
+    "done": "Done",
+    "toEnd": "Then {{km}} km to {{place}}"
   }
 }

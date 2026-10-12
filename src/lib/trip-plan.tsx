@@ -16,6 +16,8 @@ import {
   type FuelStretch,
   type Vehicle,
 } from '@/lib/fuel';
+import { fuelBudget, type FuelBudget } from '@/lib/fuel-budget';
+import { useOwnFuelPrices } from '@/lib/fuel-prices';
 import { useT } from '@/lib/i18n';
 import { applyChosenRoutes, useRoutePlan, type RoutePlanState, type ShownRoute } from '@/lib/route-plan';
 import { buildRouteLine, type RouteLine } from '@/lib/route-points';
@@ -59,6 +61,8 @@ export type TripPlan = {
   fuelChoices: FuelStopChoice[];
   fuelRows: FuelStopRow[];
   fuelStretches: FuelStretch[];
+  /** What the trip's fuel costs, once the route and the vehicle are known. */
+  budget?: FuelBudget;
 
   waterStops: WaterStop[];
   waterStretches: WaterStretch[];
@@ -119,6 +123,16 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     [line, found, planned, vehicle]
   );
 
+  // Fuel is bought at each planned fill-up; until the fuel stops are found, at each trip stop.
+  const ownPrices = useOwnFuelPrices();
+  const budget = useMemo(
+    () =>
+      line && vehicle
+        ? fuelBudget(line, fuelStretchList, vehicle, vehicle.fuelType ?? 'diesel', ownPrices)
+        : undefined,
+    [line, vehicle, fuelStretchList, ownPrices]
+  );
+
   const waterStops = useMemo(
     () => (line && found ? waterStopsAlong(line, waterPoints, found.settlements, t) : []),
     [line, found, waterPoints, t]
@@ -173,6 +187,7 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     fuelChoices,
     fuelRows,
     fuelStretches: fuelStretchList,
+    budget,
     waterStops,
     waterStretches: waterStretchList,
     categories,

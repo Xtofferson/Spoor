@@ -93,6 +93,7 @@ function RootStack() {
             options={{ title: t('screens.routeOptions'), headerBackTitle: t('tripTabs.route') }}
           />
           <Stack.Screen name="vehicle" options={{ title: t('screens.vehicle'), presentation: 'modal' }} />
+          <Stack.Screen name="fuel-prices" options={{ title: t('screens.fuelPrices'), presentation: 'modal' }} />
           <Stack.Screen name="supply/new" options={{ title: t('screens.addPlace'), presentation: 'modal' }} />
           <Stack.Screen name="supply/[id]" options={{ title: t('screens.place'), presentation: 'modal' }} />
         </Stack.Protected>

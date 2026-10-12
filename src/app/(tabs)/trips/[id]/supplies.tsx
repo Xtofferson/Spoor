@@ -6,6 +6,7 @@ import { canPickOnMap, LocationPicker } from '@/components/location-picker';
 import { MapLayerFilter, type MapLayer } from '@/components/map-layer-filter';
 import { RouteMap, type MapLine, type MapPoint } from '@/components/route-map';
 import {
+  FuelPlanCard,
   FuelRangeCard,
   FuelStopPicker,
   FuelStretchList,
@@ -120,6 +121,7 @@ export default function SuppliesTab() {
   );
 
   const [showDetails, setShowDetails] = useState(false);
+  const [pickingFuel, setPickingFuel] = useState(false);
   const [addingPlace, setAddingPlace] = useState(false);
   const addPlaceAt = ([lon, lat]: LonLat) => {
     setAddingPlace(false);
@@ -134,6 +136,25 @@ export default function SuppliesTab() {
   return (
     <TripTabScreen>
       {route && <SuppliesProgress supplies={supplies} />}
+      {route && (
+        <>
+          <FuelPlanCard
+            searched={!!plan.found}
+            rows={plan.fuelRows}
+            stretches={plan.fuelStretches}
+            budget={plan.budget}
+            vehicle={vehicle}
+            picking={pickingFuel}
+            onTogglePicking={() => setPickingFuel((open) => !open)}
+          />
+          {pickingFuel && (
+            <FuelStopPicker
+              rows={plan.fuelRows}
+              onToggleStop={(stop) => saveFuelStops(trip, toggleFuelStopChoice(plan.fuelChoices, stop))}
+            />
+          )}
+        </>
+      )}
       {route && plan.found && <Summary plan={plan} />}
       <View style={[styles.mapFrame, { borderColor: theme.border, backgroundColor: theme.backgroundSelected }]}>
         <RouteMap
@@ -168,10 +189,6 @@ export default function SuppliesTab() {
         <>
           {needsVehicle && <FuelRangeCard />}
           {needsWater && <WaterCard vehicle={vehicle} people={people} />}
-          <FuelStopPicker
-            rows={plan.fuelRows}
-            onToggleStop={(stop) => saveFuelStops(trip, toggleFuelStopChoice(plan.fuelChoices, stop))}
-          />
 
           <View style={styles.details}>
             <TextButton

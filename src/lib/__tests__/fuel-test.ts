@@ -16,6 +16,7 @@ import {
   vehicleToForm,
   type FuelStopChoice,
   type Vehicle,
+  type VehicleForm,
 } from '../fuel';
 import { surfaceShares, type LonLat } from '../route-math';
 import { buildRouteLine, locateOnRoute, type LineLeg } from '../route-points';
@@ -78,11 +79,12 @@ describe('vehicle range', () => {
 });
 
 describe('vehicle settings form', () => {
-  const filled = { name: ' LC79 ', mainTankLitres: '130', jerryCanLitres: '40', tar: '13', gravel: '15', sand: '19,5', waterLitres: '' };
+  const filled: VehicleForm = { name: ' LC79 ', fuelType: 'diesel', mainTankLitres: '130', jerryCanLitres: '40', tar: '13', gravel: '15', sand: '19,5', waterLitres: '' };
 
   it('reads a filled-in form, accepting a decimal comma', () => {
     expect(readVehicleForm(filled).vehicle).toEqual({
       name: 'LC79',
+      fuelType: 'diesel',
       mainTankLitres: 130,
       jerryCanLitres: 40,
       consumption: { tar: 13, gravel: 15, sand: 19.5 },
@@ -104,8 +106,13 @@ describe('vehicle settings form', () => {
     expect(Object.keys(errors ?? {}).sort()).toEqual(['mainTankLitres', 'name', 'sand']);
   });
 
-  it('fills the form from a saved vehicle', () => {
-    expect(readVehicleForm(vehicleToForm(landCruiser)).vehicle).toMatchObject({ name: 'Land Cruiser 79', jerryCanLitres: 40 });
+  it('fills the form from a saved vehicle, counting vehicles saved without a fuel type as diesel', () => {
+    expect(readVehicleForm(vehicleToForm(landCruiser)).vehicle).toMatchObject({
+      name: 'Land Cruiser 79',
+      jerryCanLitres: 40,
+      fuelType: 'diesel',
+    });
+    expect(vehicleToForm({ ...landCruiser, fuelType: 'petrol' }).fuelType).toBe('petrol');
   });
 });
 
