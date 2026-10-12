@@ -120,21 +120,26 @@ export function useSyncStatus(): SyncStatus {
   );
 }
 
-let running = false;
+let inFlight: Promise<void> | null = null;
 let runAgain = false;
 
 /**
  * Downloads the user's trips, merges them into the phone's copy (newest edit wins),
  * then uploads any trips changed on the phone. Safe to call often: overlapping calls
- * are folded into one extra pass.
+ * are folded into one extra pass, and wait for it.
  */
-export async function syncTrips(userId: string) {
-  if (running) {
+export function syncTrips(userId: string): Promise<void> {
+  if (inFlight) {
     runAgain = true;
-    return;
+    return inFlight;
   }
-  running = true;
+  inFlight = runSync(userId).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
 
+async function runSync(userId: string) {
   try {
     const network = await Network.getNetworkStateAsync();
     if (network.isConnected === false || network.isInternetReachable === false) {
@@ -186,8 +191,6 @@ export async function syncTrips(userId: string) {
   } catch (error) {
     console.warn('Trip sync failed:', error);
     setStatus('error');
-  } finally {
-    running = false;
   }
 }
 

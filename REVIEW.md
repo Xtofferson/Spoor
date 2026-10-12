@@ -2,7 +2,7 @@
 
 Reviewed on 12 October 2026, at commit `3183d30` (navigation and Trips redesign). No code was changed for this review.
 
-**Progress:** ✅ #1, #2, #3, #4, #5, #7, #9, #14, #16, #17 and #23–#27 are fixed.
+**Progress:** ✅ #1, #2, #3, #4, #5, #7, #8, #9, #14, #16, #17 and #23–#27 are fixed.
 
 **Effort:** **S** = under 2 hours · **M** = half a day to a day · **L** = several days.
 
@@ -34,7 +34,7 @@ The findings below are what to fix next.
 | # | Finding | One-line fix | Effort |
 |---|---|---|---|
 | 7 | ✅ **One bad place stops every later upload.** The upload queue (`syncSupplyPoints`) stops at the first failure: a deleted photo file or a rejected row keeps failing, and nothing after it ever uploads. | Handle each place separately: skip a missing photo, keep failed places with a retry count, and move on. | S |
-| 8 | **The sign-out dialog can be wrong.** It says "Your trips stay saved in your account" even when changes haven't uploaded yet (e.g. offline). | Check for unsynced trips, vehicle and places; offer "Sync first" or warn clearly. | S |
+| 8 | ✅ **The sign-out dialog can be wrong.** It says "Your trips stay saved in your account" even when changes haven't uploaded yet (e.g. offline). | Check for unsynced trips, vehicle and places; offer "Sync first" or warn clearly. | S |
 | 9 | ✅ **A wrong or empty download hides trips.** `mergeRemoteTrips` drops every synced trip that's missing from the download. They're still in Supabase, but a wrong session or a future row-level-security mistake would make them vanish from the phone until fixed. | Don't drop more than a few trips from one download without checking again (or require a non-empty result when the phone has synced trips). | S |
 | 10 | **Saved data on the phone only grows.** Route plans (`spoor.route.v3.*`), route options, Overpass results (`spoor.supplies.v4.*`) and supply points are never deleted. Every stop edit adds a new plan, and older versions (`supplies.v2`/`v3`, `route.v1`/`v2`) are left behind. | On launch, remove old key versions, and keep only the newest N entries per kind (or entries for current trips). | M |
 | 11 | **Big saved data is read on the screen thread.** `storage.getItem` + `JSON.parse` of saved plans and Overpass results runs synchronously during render (kv-store sync API), which can make opening a trip stutter. | Read large entries with the async kv-store API in an effect, or keep them in SQLite tables. | M |

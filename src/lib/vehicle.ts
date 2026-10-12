@@ -68,15 +68,26 @@ export function saveVehicle(vehicle: Omit<Vehicle, 'updatedAt'>) {
   void syncVehicle(currentUserId);
 }
 
-let syncing = false;
+/** Whether the user's vehicle has changes on this phone that haven't reached the account. */
+export function vehicleNeedsUpload(userId: string): boolean {
+  return !!(userId === currentUserId ? current : load(userId))?.dirty;
+}
+
+let inFlight: Promise<void> | null = null;
 
 /**
  * Keeps the phone's copy and the account's copy (in the user's Supabase profile data) the
  * same: the newer one wins. Does nothing quietly when offline; the phone's copy still works.
+ * A call while a sync is running waits for that one.
  */
-export async function syncVehicle(userId: string) {
-  if (syncing) return;
-  syncing = true;
+export function syncVehicle(userId: string): Promise<void> {
+  inFlight ??= runSync(userId).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+async function runSync(userId: string) {
   try {
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user || data.user.id !== userId) return;
@@ -93,8 +104,6 @@ export async function syncVehicle(userId: string) {
     }
   } catch (error) {
     console.warn('Vehicle sync failed:', error);
-  } finally {
-    syncing = false;
   }
 }
 

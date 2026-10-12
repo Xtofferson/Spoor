@@ -366,7 +366,24 @@
     "name": "Jou naam",
     "namePlaceholder": "Vir die groet op die Reise-oortjie",
     "nameNotSaved": "Naam nie gestoor nie",
-    "nameNotSavedHint": "Kyk na jou verbinding en probeer weer."
+    "nameNotSavedHint": "Kyk na jou verbinding en probeer weer.",
+    "unsynced": {
+      "trips": {
+        "one": "{{count}} reis",
+        "other": "{{count}} reise"
+      },
+      "vehicle": "Jou voertuig",
+      "places": {
+        "one": "{{count}} plek wat jy bygevoeg het",
+        "other": "{{count}} plekke wat jy bygevoeg het"
+      }
+    },
+    "unsyncedTitle": "Nie alles is opgelaai nie",
+    "unsyncedMessage": "Hierdie veranderinge is tot dusver net op hierdie foon:\n{{list}}\n\nAs jy afmeld, bly hulle op hierdie foon en word opgelaai wanneer jy weer hier aanmeld. Tot dan sien jy hulle nie op ander toestelle nie, en hulle gaan verlore as Spoor verwyder word.",
+    "uploadFirst": "Laai eers op",
+    "signOutAnyway": "Meld tog af",
+    "stillUnsyncedTitle": "Kon nie alles oplaai nie",
+    "stillUnsyncedMessage": "Dalk is daar geen sein nie. Steeds net op hierdie foon:\n{{list}}\n\nProbeer weer wanneer jy aanlyn is, of meld tog af; hulle word opgelaai wanneer jy weer hier aanmeld."
   },
   "tripForm": {
     "origin": "Vertrekpunt",

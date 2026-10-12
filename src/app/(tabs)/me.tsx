@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/auth';
 import { setLanguageSetting, useLanguageSetting, useT, type LanguageSetting } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { syncTrips, useSyncStatus } from '@/lib/trip-sync';
+import { hasUnsynced, syncEverything, unsyncedChanges, unsyncedLines } from '@/lib/unsynced';
 import { useVehicle } from '@/lib/vehicle';
 
 /** The Me tab: your account, your vehicle, the app's language and settings. */
@@ -45,10 +46,46 @@ export default function MeScreen() {
     { value: 'system', label: t('me.languagePhone') },
   ];
 
+  const [uploading, setUploading] = useState(false);
+
+  /**
+   * Signs out, but first says if anything hasn't uploaded yet (e.g. edits made offline),
+   * and offers to upload it.
+   */
   function signOut() {
-    Alert.alert(t('me.signOutConfirmTitle'), t('me.signOutConfirm'), [
+    const userId = session?.user.id;
+    const unsynced = userId ? unsyncedChanges(userId) : undefined;
+    const cancel = { text: t('common.cancel'), style: 'cancel' as const };
+    const anyway = { text: t('me.signOutAnyway'), style: 'destructive' as const, onPress: () => supabase.auth.signOut() };
+    if (!userId || !unsynced || !hasUnsynced(unsynced)) {
+      Alert.alert(t('me.signOutConfirmTitle'), t('me.signOutConfirm'), [
+        cancel,
+        { text: t('me.signOut'), style: 'destructive', onPress: () => supabase.auth.signOut() },
+      ]);
+      return;
+    }
+    Alert.alert(t('me.unsyncedTitle'), t('me.unsyncedMessage', { list: unsyncedLines(unsynced, t) }), [
+      cancel,
+      anyway,
+      { text: t('me.uploadFirst'), onPress: () => void uploadThenSignOut(userId) },
+    ]);
+  }
+
+  async function uploadThenSignOut(userId: string) {
+    setUploading(true);
+    try {
+      await syncEverything(userId);
+    } finally {
+      setUploading(false);
+    }
+    const left = unsyncedChanges(userId);
+    if (!hasUnsynced(left)) {
+      await supabase.auth.signOut();
+      return;
+    }
+    Alert.alert(t('me.stillUnsyncedTitle'), t('me.stillUnsyncedMessage', { list: unsyncedLines(left, t) }), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('me.signOut'), style: 'destructive', onPress: () => supabase.auth.signOut() },
+      { text: t('me.signOutAnyway'), style: 'destructive', onPress: () => supabase.auth.signOut() },
     ]);
   }
 
@@ -146,7 +183,7 @@ export default function MeScreen() {
             </Row>
           </Section>
 
-          <Button variant="danger" label={t('me.signOut')} onPress={signOut} />
+          <Button variant="danger" label={t('me.signOut')} onPress={signOut} busy={uploading} />
         </ScrollView>
       </SafeAreaView>
     </ThemedView>

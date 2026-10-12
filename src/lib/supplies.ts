@@ -175,15 +175,27 @@ async function uploadPoint(userId: string, point: SupplyPoint) {
   if (error) throw error;
 }
 
-let syncing = false;
+let inFlight: Promise<void> | null = null;
 
 /**
  * Uploads places added on this phone, each with its photo. Quietly waits when offline. Each
  * place is tried on its own, so one that keeps failing doesn't hold up the others.
  */
-export async function syncSupplyPoints(userId: string) {
-  if (syncing || userId !== currentUserId || pending.get().length === 0) return;
-  syncing = true;
+export function syncSupplyPoints(userId: string): Promise<void> {
+  if (inFlight) return inFlight;
+  if (userId !== currentUserId || pending.get().length === 0) return Promise.resolve();
+  inFlight = uploadPending(userId).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+/** How many places added on this phone haven't uploaded yet. */
+export function pendingPointCount(userId: string): number {
+  return userId === currentUserId ? pending.get().length : 0;
+}
+
+async function uploadPending(userId: string) {
   let uploaded = false;
   try {
     const network = await Network.getNetworkStateAsync();
@@ -209,7 +221,6 @@ export async function syncSupplyPoints(userId: string) {
       }
     }
   } finally {
-    syncing = false;
     if (uploaded) version.set(version.get() + 1);
   }
 }

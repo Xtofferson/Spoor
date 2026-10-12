@@ -366,7 +366,24 @@
     "name": "Your name",
     "namePlaceholder": "For the greeting on the Trips tab",
     "nameNotSaved": "Name not saved",
-    "nameNotSavedHint": "Check your connection and try again."
+    "nameNotSavedHint": "Check your connection and try again.",
+    "unsynced": {
+      "trips": {
+        "one": "{{count}} trip",
+        "other": "{{count}} trips"
+      },
+      "vehicle": "Your vehicle",
+      "places": {
+        "one": "{{count}} place you added",
+        "other": "{{count}} places you added"
+      }
+    },
+    "unsyncedTitle": "Not everything has uploaded",
+    "unsyncedMessage": "These changes are only on this phone so far:\n{{list}}\n\nIf you sign out, they stay on this phone and upload when you sign in here again. Until then you won’t see them on other devices, and they’re lost if Spoor is deleted.",
+    "uploadFirst": "Upload first",
+    "signOutAnyway": "Sign out anyway",
+    "stillUnsyncedTitle": "Couldn’t upload everything",
+    "stillUnsyncedMessage": "Maybe there’s no signal. Still only on this phone:\n{{list}}\n\nTry again when you’re online, or sign out anyway; they’ll upload when you sign in here again."
   },
   "tripForm": {
     "origin": "Origin",
