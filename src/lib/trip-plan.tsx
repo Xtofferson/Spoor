@@ -17,7 +17,7 @@ import {
   type Vehicle,
 } from '@/lib/fuel';
 import { fuelBudget, type FuelBudget } from '@/lib/fuel-budget';
-import { useOwnFuelPrices } from '@/lib/fuel-prices';
+import { useOwnFuelPrices, usePriceList } from '@/lib/fuel-prices';
 import { useT } from '@/lib/i18n';
 import { applyChosenRoutes, useRoutePlan, type RoutePlanState, type ShownRoute } from '@/lib/route-plan';
 import { buildRouteLine, type RouteLine } from '@/lib/route-points';
@@ -125,12 +125,13 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
 
   // Fuel is bought at each planned fill-up; until the fuel stops are found, at each trip stop.
   const ownPrices = useOwnFuelPrices();
+  const priceList = usePriceList();
   const budget = useMemo(
     () =>
       line && vehicle
-        ? fuelBudget(line, fuelStretchList, vehicle, vehicle.fuelType ?? 'diesel', ownPrices)
+        ? fuelBudget(line, fuelStretchList, vehicle, vehicle.fuelType ?? 'diesel', ownPrices, priceList)
         : undefined,
-    [line, vehicle, fuelStretchList, ownPrices]
+    [line, vehicle, fuelStretchList, ownPrices, priceList]
   );
 
   const waterStops = useMemo(

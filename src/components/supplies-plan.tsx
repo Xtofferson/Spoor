@@ -21,8 +21,7 @@ import {
   type Vehicle,
 } from '@/lib/fuel';
 import type { CountryCode } from '@/lib/countries';
-import { formatRand, type FuelBudget } from '@/lib/fuel-budget';
-import { ESTIMATES_DATE } from '@/lib/fuel-prices';
+import { formatRand, oldestPriceDate, type FuelBudget } from '@/lib/fuel-budget';
 import { dateLocale, useT, type Translate } from '@/lib/i18n';
 import type { SavedSupplies, SuppliesState } from '@/lib/route-supplies';
 import { categoryText, gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan } from '@/lib/supply-points';
@@ -370,12 +369,9 @@ function BudgetSection({ budget, vehicle, hasFuelStops }: { budget: FuelBudget; 
   const fuel = vehicle.fuelType ?? 'diesel';
   const country = (code?: CountryCode) => (code ? t(`countries.${code}`) : t('fuelBudget.elsewhere'));
   const guessed = budget.lines.filter((line) => line.source === 'fallback').map((line) => country(line.country));
-  const estimated = budget.lines.some((line) => line.source === 'estimate');
-  const date = fromDateString(ESTIMATES_DATE).toLocaleDateString(dateLocale(), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const oldest = oldestPriceDate(budget);
+  const date =
+    oldest && fromDateString(oldest).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <View style={[styles.budget, { borderTopColor: theme.borderSoft }]}>
@@ -411,7 +407,7 @@ function BudgetSection({ budget, vehicle, hasFuelStops }: { budget: FuelBudget; 
       )}
       <ThemedText type="small" themeColor="textSecondary">
         {hasFuelStops ? t('fuelBudget.howFuelStops') : t('fuelBudget.howStops')}{' '}
-        {estimated ? t('fuelBudget.estimates', { date }) : t('fuelBudget.ownPrices')}
+        {date ? t('fuelBudget.estimates', { date }) : t('fuelBudget.ownPrices')}
       </ThemedText>
     </View>
   );

@@ -546,8 +546,8 @@
     "ownPrices": "Met die pryse wat jy gestel het."
   },
   "fuelPrices": {
-    "intro": "Rand per liter, vir elke reis se brandstofbegroting. Spoor begin met skattings van {{date}}; tik wat jy betaal om dit eerder te gebruik.",
-    "estimate": "Skatting: R{{price}}",
+    "intro": "Rand per liter, vir elke reis se brandstofbegroting. Spoor begin met die nuutste gepubliseerde pryse wat dit het; tik wat jy betaal om dit eerder te gebruik.",
+    "estimate": "Gepubliseer {{date}}: R{{price}}",
     "noEstimate": "Geen skatting nie: Suid-Afrika s’n word gebruik",
     "reset": "Vee my pryse uit",
     "error": "Tik ’n prys soos 31,50"

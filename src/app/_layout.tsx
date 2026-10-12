@@ -13,6 +13,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
+import { useFuelPriceSync } from '@/lib/fuel-price-sync';
 import { routePlanKey } from '@/lib/route-plan';
 import { cleanUpSavedData } from '@/lib/saved-data';
 import { useSupplySync } from '@/lib/supplies';
@@ -109,5 +110,6 @@ function TripSync({ userId }: { userId: string }) {
   useTripSync(userId);
   useVehicleSync(userId);
   useSupplySync(userId);
+  useFuelPriceSync();
   return null;
 }

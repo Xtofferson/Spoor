@@ -546,8 +546,8 @@
     "ownPrices": "Using the prices you set."
   },
   "fuelPrices": {
-    "intro": "Rand per litre, used for each trip’s fuel budget. Spoor starts with estimates from {{date}}; type what you pay to use that instead.",
-    "estimate": "Estimate: R{{price}}",
+    "intro": "Rand per litre, used for each trip’s fuel budget. Spoor starts with the latest published prices it has; type what you pay to use that instead.",
+    "estimate": "Published {{date}}: R{{price}}",
     "noEstimate": "No estimate: South Africa’s is used",
     "reset": "Clear my prices",
     "error": "Enter a price like 31.50"

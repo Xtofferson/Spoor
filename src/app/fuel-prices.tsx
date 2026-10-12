@@ -7,12 +7,12 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { COUNTRIES, type CountryCode } from '@/lib/countries';
 import {
-  ESTIMATED_PRICES,
-  ESTIMATES_DATE,
   FALLBACK_COUNTRY,
   setOwnFuelPrice,
   useOwnFuelPrices,
+  usePriceList,
   type FuelType,
+  type PriceList,
 } from '@/lib/fuel-prices';
 import { dateLocale, useLanguage, useT } from '@/lib/i18n';
 import { fromDateString } from '@/lib/trips';
@@ -33,12 +33,11 @@ function readPrice(text: string): number | null | undefined {
 export default function FuelPricesScreen() {
   const theme = useTheme();
   const t = useT();
-  const locale = dateLocale(useLanguage());
   const own = useOwnFuelPrices();
+  const list = usePriceList();
   const vehicle = useVehicle();
   const fuel: FuelType = vehicle?.fuelType ?? 'diesel';
   const other: FuelType = fuel === 'diesel' ? 'petrol' : 'diesel';
-  const date = fromDateString(ESTIMATES_DATE).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   const hasOwn = COUNTRIES.some((code) => own[code]?.diesel || own[code]?.petrol);
 
   return (
@@ -46,13 +45,13 @@ export default function FuelPricesScreen() {
       style={[styles.flex, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ThemedText themeColor="textSecondary">{t('fuelPrices.intro', { date })}</ThemedText>
+        <ThemedText themeColor="textSecondary">{t('fuelPrices.intro')}</ThemedText>
         {COUNTRIES.map((code) => (
           <Card key={code}>
             <ThemedText type="heading">{t(`countries.${code}`)}</ThemedText>
             <View style={styles.fields}>
               {[fuel, other].map((type) => (
-                <PriceField key={type} country={code} fuel={type} own={own[code]?.[type]} />
+                <PriceField key={type} country={code} fuel={type} own={own[code]?.[type]} list={list} />
               ))}
             </View>
           </Card>
@@ -75,12 +74,23 @@ export default function FuelPricesScreen() {
   );
 }
 
-function PriceField({ country, fuel, own }: { country: CountryCode; fuel: FuelType; own?: number }) {
+function PriceField({
+  country,
+  fuel,
+  own,
+  list,
+}: {
+  country: CountryCode;
+  fuel: FuelType;
+  own?: number;
+  list: PriceList;
+}) {
   const t = useT();
+  const locale = dateLocale(useLanguage());
   const [text, setText] = useState(own !== undefined ? own.toFixed(2) : '');
   const [error, setError] = useState<string | undefined>();
-  const estimate = ESTIMATED_PRICES[country]?.[fuel];
-  const fallback = ESTIMATED_PRICES[FALLBACK_COUNTRY]![fuel]!;
+  const listed = list[country]?.[fuel];
+  const fallback = list[FALLBACK_COUNTRY]?.[fuel];
 
   function save() {
     const price = readPrice(text);
@@ -101,13 +111,18 @@ function PriceField({ country, fuel, own }: { country: CountryCode; fuel: FuelTy
         onChangeText={setText}
         onEndEditing={save}
         onSubmitEditing={save}
-        placeholder={estimate !== undefined ? estimate.toFixed(2) : `${fallback.toFixed(2)}*`}
+        placeholder={listed ? listed.price.toFixed(2) : fallback ? `${fallback.price.toFixed(2)}*` : ''}
         keyboardType="decimal-pad"
         returnKeyType="done"
         error={error}
       />
       <ThemedText type="small" themeColor="textSecondary">
-        {estimate !== undefined ? t('fuelPrices.estimate', { price: estimate.toFixed(2) }) : t('fuelPrices.noEstimate')}
+        {listed
+          ? t('fuelPrices.estimate', {
+              price: listed.price.toFixed(2),
+              date: fromDateString(listed.asOf).toLocaleDateString(locale, { day: 'numeric', month: 'short' }),
+            })
+          : t('fuelPrices.noEstimate')}
       </ThemedText>
     </View>
   );

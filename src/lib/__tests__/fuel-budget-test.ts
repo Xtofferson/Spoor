@@ -1,7 +1,7 @@
 import { countryAt, type CountryCode } from '../countries';
 import type { Vehicle } from '../fuel';
-import { fuelBudget, formatRand } from '../fuel-budget';
-import { ESTIMATED_PRICES, priceIn } from '../fuel-prices';
+import { fuelBudget, formatRand, oldestPriceDate } from '../fuel-budget';
+import { BUILT_IN_PRICES, priceIn, priceListFromRows } from '../fuel-prices';
 import { buildRouteLine } from '../route-points';
 
 jest.mock('@/lib/storage', () => ({
@@ -48,13 +48,16 @@ describe('fuelBudget', () => {
   const countryOf = ([lon]: [number, number]): CountryCode => (lon < 23 ? 'ZA' : 'BW');
 
   it('without fuel stops, refills each leg where it ends, at that country’s price', () => {
-    const budget = fuelBudget(line, [], landCruiser, 'diesel', {}, countryOf);
+    const list = { ZA: { diesel: { price: 30, asOf: '2026-10-07' } }, BW: { diesel: { price: 25, asOf: '2026-10-05' } } };
+    const budget = fuelBudget(line, [], landCruiser, 'diesel', {}, list, countryOf);
     expect(budget.lines.map((l) => [l.country, Math.round(l.litres), l.pricePerLitre, l.source])).toEqual([
-      ['ZA', 39, ESTIMATED_PRICES.ZA!.diesel, 'estimate'],
-      ['BW', 19, ESTIMATED_PRICES.BW!.diesel, 'estimate'],
+      ['ZA', 39, 30, 'estimate'],
+      ['BW', 19, 25, 'estimate'],
     ]);
     expect(budget.litres).toBeCloseTo(58);
-    expect(budget.total).toBeCloseTo(39 * ESTIMATED_PRICES.ZA!.diesel! + 19 * ESTIMATED_PRICES.BW!.diesel!);
+    expect(budget.total).toBeCloseTo(39 * 30 + 19 * 25);
+    // The budget says how current it is by its oldest price.
+    expect(oldestPriceDate(budget)).toBe('2026-10-05');
   });
 
   it('buys each stretch’s fuel at the fuel stop that ends it, and uses the person’s own prices', () => {
@@ -63,20 +66,50 @@ describe('fuelBudget', () => {
       { startKm: 0, endKm: 350 },
       { startKm: 350, endKm: 400 },
     ];
-    const budget = fuelBudget(line, refills, landCruiser, 'petrol', { BW: { petrol: 20 } }, countryOf);
+    const budget = fuelBudget(line, refills, landCruiser, 'petrol', { BW: { petrol: 20 } }, BUILT_IN_PRICES, countryOf);
     expect(budget.lines).toEqual([
       expect.objectContaining({ country: 'BW', pricePerLitre: 20, source: 'own' }),
     ]);
     expect(budget.litres).toBeCloseTo(58);
     expect(budget.total).toBeCloseTo(58 * 20);
+    expect(oldestPriceDate(budget)).toBeUndefined();
   });
 });
 
 describe('priceIn', () => {
+  const list = { ZA: { diesel: { price: 33, asOf: '2026-10-07' } }, LS: { petrol: { price: 29, asOf: '2026-10-01' } } };
+
+  it('prefers the person’s own price, then the list’s', () => {
+    expect(priceIn('LS', 'diesel', { LS: { diesel: 30 } }, list)).toEqual({ price: 30, source: 'own' });
+    expect(priceIn('LS', 'petrol', {}, list)).toEqual({ price: 29, source: 'estimate', asOf: '2026-10-01' });
+  });
+
   it('uses South Africa’s price for a country without one, and says so', () => {
-    expect(priceIn('LS', 'diesel', {})).toEqual({ price: ESTIMATED_PRICES.ZA!.diesel, source: 'fallback' });
-    expect(priceIn('LS', 'diesel', { ZA: { diesel: 31 } })).toEqual({ price: 31, source: 'fallback' });
-    expect(priceIn('LS', 'diesel', { LS: { diesel: 30 } })).toEqual({ price: 30, source: 'own' });
+    expect(priceIn('LS', 'diesel', {}, list)).toEqual({ price: 33, source: 'fallback', asOf: '2026-10-07' });
+    expect(priceIn('LS', 'diesel', { ZA: { diesel: 31 } }, list)).toEqual({ price: 31, source: 'fallback' });
+  });
+
+  it('falls back to the built-in South African price if the list has none', () => {
+    expect(priceIn(undefined, 'diesel', {}, {})).toEqual({
+      price: BUILT_IN_PRICES.ZA!.diesel!.price,
+      source: 'fallback',
+      asOf: BUILT_IN_PRICES.ZA!.diesel!.asOf,
+    });
+  });
+});
+
+describe('priceListFromRows', () => {
+  it('reads Supabase rows, skipping unknown countries, fuels and broken prices', () => {
+    const rows = [
+      { country: 'ZA', fuel: 'diesel', price_rand: '33.29', as_of: '2026-10-07' },
+      { country: 'ZA', fuel: 'petrol', price_rand: 30.25, as_of: '2026-10-07' },
+      { country: 'KE', fuel: 'diesel', price_rand: 25, as_of: '2026-10-07' },
+      { country: 'BW', fuel: 'paraffin', price_rand: 15, as_of: '2026-10-07' },
+      { country: 'BW', fuel: 'diesel', price_rand: 'lots', as_of: '2026-10-07' },
+    ];
+    expect(priceListFromRows(rows, ['ZA', 'BW'])).toEqual({
+      ZA: { diesel: { price: 33.29, asOf: '2026-10-07' }, petrol: { price: 30.25, asOf: '2026-10-07' } },
+    });
   });
 });
 
