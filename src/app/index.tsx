@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { LanguageToggle } from '@/components/language-toggle';
 import { ThemedView } from '@/components/themed-view';
-import { WheelTrack } from '@/components/wheel-track';
+import { LandingScene } from '@/components/landing-scene';
 import { BorderWidth, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
@@ -28,7 +28,7 @@ type Place = {
 /**
  * The landing page after signing in: the wordmark, the slogan, a greeting, and a large button
  * for each part of the app (Trips, Community, Maps and Me). Each opens that tab, with the tab
- * bar. Below them, an EN | AF switch, then a greyed-out wheel leaving its track in the sand.
+ * bar. Below them, an EN | AF switch, then a greyed-out 4x4 driving away through the sand.
  */
 export default function Landing() {
   const t = useT();
@@ -96,7 +96,7 @@ export default function Landing() {
           </View>
 
           <LanguageToggle />
-          <WheelTrack style={styles.wheel} />
+          <LandingScene style={styles.scene} />
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   places: {
     gap: 12,
   },
-  wheel: {
+  scene: {
     // Fills the space left under the buttons, shrinking on small phones so nothing is cut off.
     flex: 1,
     minHeight: 96,
