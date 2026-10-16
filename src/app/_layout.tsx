@@ -6,6 +6,7 @@ import { LilitaOne_400Regular } from '@expo-google-fonts/lilita-one/400Regular';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { Fonts } from '@/constants/theme';
@@ -83,6 +84,8 @@ function RootStack() {
 
   return (
     <>
+      {/* Dark text on the always-light pages, even when the phone is in dark mode. */}
+      <StatusBar style="dark" />
       {session && <TripSync userId={session.user.id} />}
       <Stack screenOptions={{ headerTitleStyle: { fontFamily: Fonts.display, fontSize: 20 } }}>
         <Stack.Protected guard={!!session}>

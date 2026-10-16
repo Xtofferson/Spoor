@@ -2,7 +2,7 @@
 
 Reviewed on 12 October 2026, at commit `3183d30` (navigation and Trips redesign). No code was changed for this review.
 
-**Progress:** ✅ #1, #2, #3, #4, #5, #7, #8, #9, #10, #13, #14, #16, #17, #20, #21 and #23–#27 are fixed.
+**Progress:** ✅ #1, #2, #3, #4, #5, #7, #8, #9, #10, #13, #14, #16, #17, #20, #21, #23–#27 and #31 are fixed (#31 by locking the app to light).
 
 **Effort:** **S** = under 2 hours · **M** = half a day to a day · **L** = several days.
 
@@ -69,7 +69,7 @@ The findings below are what to fix next.
 | 28 | **Water is nearly always amber.** OpenStreetMap has very few water points in southern Africa, so almost every route warns, and people learn to ignore it. | Count towns or fuel stations as places to buy water (setting or default). | S–M |
 | 29 | **Missing hints and states:** with no vehicle saved, the Trips card silently leaves out fuel; route options says "Use: Via A1"; messages mention "OpenRouteService" and "OpenStreetMap" to people who don't know what those are. | Add an "Add your vehicle" chip, and rewrite those messages in plain words ("Route planning is busy, try again later"). | S |
 | 30 | **Hard-coded colours** don't follow the theme or dark mode: water layer `#3E7CA6`, marker outline `#F3E7CF`, colours inside marker PNGs. | Move them into `Colors`. | S |
-| 31 | **Dark mode isn't in the mockups,** and the dark palette hasn't been checked on a phone. | Check every screen in dark mode, or lock the app to light until it's designed. | S |
+| 31 | ✅ **Dark mode isn't in the mockups,** and the dark palette hasn't been checked on a phone. | Check every screen in dark mode, or lock the app to light until it's designed. | S |
 | 32 | **The Afrikaans was written by Claude, not a native speaker.** Supabase's sign-in errors are English only. | Have a native speaker review `af.json`, and translate common auth errors by code. | S |
 
 ## Nice to have
