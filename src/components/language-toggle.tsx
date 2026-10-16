@@ -52,7 +52,7 @@ export function LanguageToggle() {
 const styles = StyleSheet.create({
   toggle: {
     flexDirection: 'row',
-    alignSelf: 'flex-end',
+    alignSelf: 'center',
     padding: 3,
     gap: 3,
     borderWidth: BorderWidth,

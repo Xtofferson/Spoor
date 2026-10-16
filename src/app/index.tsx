@@ -26,10 +26,9 @@ type Place = {
 };
 
 /**
- * The landing page after signing in: an EN | AF switch, the wordmark, the slogan, a greeting,
- * and a large button for each part of the app (Trips, Community, Maps and Me). Each opens that
- * tab, with the tab bar.
- * Below them, a greyed-out wheel leaves its track in the sand.
+ * The landing page after signing in: the wordmark, the slogan, a greeting, and a large button
+ * for each part of the app (Trips, Community, Maps and Me). Each opens that tab, with the tab
+ * bar. Below them, a greyed-out wheel leaves its track in the sand, then an EN | AF switch.
  */
 export default function Landing() {
   const t = useT();
@@ -73,7 +72,6 @@ export default function Landing() {
     <ThemedView style={styles.flex}>
       <SafeAreaView style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content}>
-          <LanguageToggle />
           <View style={styles.header}>
             <Image
               source={require('@/assets/brand/spoor-wordmark.png')}
@@ -98,6 +96,7 @@ export default function Landing() {
           </View>
 
           <WheelTrack style={styles.wheel} />
+          <LanguageToggle />
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -140,9 +139,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    gap: Spacing.four,
+    gap: Spacing.three,
     paddingHorizontal: 20,
-    paddingVertical: Spacing.four,
+    paddingVertical: Spacing.three,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
@@ -164,8 +163,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   wheel: {
-    // Sits at the bottom of the empty space under the buttons.
-    marginTop: 'auto',
+    // Fills the space left under the buttons, shrinking on small phones so nothing is cut off.
+    flex: 1,
+    minHeight: 96,
+    maxHeight: 200,
     maxWidth: 420,
     alignSelf: 'center',
   },
@@ -173,14 +174,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    minHeight: 88,
-    padding: Spacing.three,
+    minHeight: 76,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: 12,
     borderWidth: BorderWidth,
     borderRadius: Radius.card,
   },
   icon: {
-    width: 52,
-    height: 52,
+    width: 46,
+    height: 46,
     borderRadius: Radius.pill,
     borderWidth: BorderWidth,
     alignItems: 'center',

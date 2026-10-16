@@ -68,9 +68,6 @@ export default function SignInScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container}>
-        <View style={styles.toggleBar}>
-          <LanguageToggle />
-        </View>
         <KeyboardAvoidingView
           style={styles.container}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -149,6 +146,9 @@ export default function SignInScreen() {
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
+        <View style={styles.toggleBar}>
+          <LanguageToggle />
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
@@ -168,11 +168,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   toggleBar: {
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.two,
-    width: '100%',
-    maxWidth: 480,
-    alignSelf: 'center',
+    paddingVertical: Spacing.two,
   },
   header: {
     gap: Spacing.two,

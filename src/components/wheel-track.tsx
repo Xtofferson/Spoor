@@ -47,7 +47,7 @@ export function WheelTrack({ style }: { style?: StyleProp<ViewStyle> }) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none">
-      <Svg width="100%" height="100%" viewBox={`0 0 ${WIDTH} ${HEIGHT}`}>
+      <Svg width="100%" height="100%" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="xMidYMax meet">
         <Defs>
           <LinearGradient id="track" x1="0" y1="0" x2="1" y2="0">
             <Stop offset="0" stopColor={color} stopOpacity={0} />
@@ -178,8 +178,8 @@ export function WheelTrack({ style }: { style?: StyleProp<ViewStyle> }) {
 }
 
 const styles = StyleSheet.create({
+  // As wide as it's allowed; give it a height (or flex), and the drawing scales to fit at the bottom.
   frame: {
     width: '100%',
-    aspectRatio: WIDTH / HEIGHT,
   },
 });
