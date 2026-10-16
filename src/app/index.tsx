@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { LanguageToggle } from '@/components/language-toggle';
 import { ThemedView } from '@/components/themed-view';
 import { WheelTrack } from '@/components/wheel-track';
 import { BorderWidth, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
@@ -25,9 +26,9 @@ type Place = {
 };
 
 /**
- * The landing page after signing in: the wordmark, a headline, a greeting, and a large button
- * for each part of the app (Trips, Community, Maps and Me). Each opens that tab, with the tab
- * bar.
+ * The landing page after signing in: an EN | AF switch, the wordmark, the slogan, a greeting,
+ * and a large button for each part of the app (Trips, Community, Maps and Me). Each opens that
+ * tab, with the tab bar.
  * Below them, a greyed-out wheel leaves its track in the sand.
  */
 export default function Landing() {
@@ -72,6 +73,7 @@ export default function Landing() {
     <ThemedView style={styles.flex}>
       <SafeAreaView style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content}>
+          <LanguageToggle />
           <View style={styles.header}>
             <Image
               source={require('@/assets/brand/spoor-wordmark.png')}
@@ -82,7 +84,7 @@ export default function Landing() {
               accessibilityLabel="Spoor"
             />
             <ThemedText accessibilityRole="header" style={styles.headline}>
-              {t('landing.headline')}
+              {t('brand.slogan')}
             </ThemedText>
             <ThemedText themeColor="textSecondary" style={styles.greeting}>
               {name ? t('home.greetingName', { greeting, name }) : greeting}
@@ -148,7 +150,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     gap: Spacing.two,
-    paddingTop: Spacing.three,
   },
   headline: {
     fontFamily: Fonts.display,

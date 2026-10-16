@@ -237,6 +237,9 @@
     "delete": "Vee uit",
     "comingSoon": "Kom binnekort"
   },
+  "brand": {
+    "slogan": "Volg die Spoor waar die teerpad ophou."
+  },
   "tabs": {
     "home": "Tuis",
     "trips": "Reise",
@@ -245,7 +248,6 @@
     "me": "Ek"
   },
   "landing": {
-    "headline": "Volg die Spoor waar die teerpad ophou.",
     "trips": "Beplan roetes, brandstof, water en kampe",
     "nextTrip": "Volgende: {{name}}, {{date}}",
     "community": "Plekke en wenke van ander reisigers",

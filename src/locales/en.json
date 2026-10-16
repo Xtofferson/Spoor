@@ -237,6 +237,9 @@
     "delete": "Delete",
     "comingSoon": "Coming soon"
   },
+  "brand": {
+    "slogan": "Follow the Spoor where the tar ends."
+  },
   "tabs": {
     "home": "Home",
     "trips": "Trips",
@@ -245,7 +248,6 @@
     "me": "Me"
   },
   "landing": {
-    "headline": "Follow the Spoor where the tar ends.",
     "trips": "Plan routes, fuel, water and camps",
     "nextTrip": "Next: {{name}}, {{date}}",
     "community": "Places and tips from other travellers",

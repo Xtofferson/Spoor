@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LanguageToggle } from '@/components/language-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Input, MIN_TOUCH } from '@/components/ui';
-import { Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useT } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
@@ -67,6 +68,9 @@ export default function SignInScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container}>
+        <View style={styles.toggleBar}>
+          <LanguageToggle />
+        </View>
         <KeyboardAvoidingView
           style={styles.container}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -80,6 +84,7 @@ export default function SignInScreen() {
                 accessibilityRole="header"
                 accessibilityLabel="Spoor"
               />
+              <ThemedText style={styles.slogan}>{t('brand.slogan')}</ThemedText>
               <ThemedText themeColor="textSecondary">
                 {isSignUp ? t('signIn.createIntro') : t('signIn.intro')}
               </ThemedText>
@@ -162,9 +167,21 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     alignSelf: 'center',
   },
+  toggleBar: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+  },
   header: {
     gap: Spacing.two,
     marginBottom: Spacing.three,
+  },
+  slogan: {
+    fontFamily: Fonts.display,
+    fontSize: 24,
+    lineHeight: 30,
   },
   fields: {
     gap: 10,
