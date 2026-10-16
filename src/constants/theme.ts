@@ -3,8 +3,6 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-import '@/global.css';
-
 /**
  * The safari palette from the v2 mockups (design/v2-*.html): sand pages, cream cards, dark
  * brown text and outlines, burnt-orange buttons, and ochre and olive for warnings and good news.
@@ -77,15 +75,6 @@ export const Colors = {
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-/** The safari brand palette, the same in light and dark mode. */
-export const SafariColors = {
-  sand: '#F3E7CF',
-  ochre: '#D9902F',
-  burntOrange: '#C4572A',
-  olive: '#5E6B3A',
-  darkBrown: '#3B2A1E',
-} as const;
 
 /**
  * The mockups' fonts, loaded in the root layout: Lilita One for headings, IBM Plex Sans for

@@ -2,7 +2,7 @@
 
 Reviewed on 12 October 2026, at commit `3183d30` (navigation and Trips redesign). No code was changed for this review.
 
-**Progress:** ✅ #1, #2, #3, #4, #5, #7, #8, #9, #10, #14, #16, #17 and #23–#27 are fixed.
+**Progress:** ✅ #1, #2, #3, #4, #5, #7, #8, #9, #10, #13, #14, #16, #17, #20, #21 and #23–#27 are fixed.
 
 **Effort:** **S** = under 2 hours · **M** = half a day to a day · **L** = several days.
 
@@ -43,7 +43,7 @@ The findings below are what to fix next.
 ### Security
 | # | Finding | One-line fix | Effort |
 |---|---|---|---|
-| 13 | **A place can point at someone else's photo.** `supply_points.photo_path` isn't checked, so a user can set it to another user's photo. | Add `check (photo_path is null or photo_path like created_by::text \|\| '/%')`. | S |
+| 13 | ✅ **A place can point at someone else's photo.** `supply_points.photo_path` isn't checked, so a user can set it to another user's photo. | Add `check (photo_path is null or photo_path like created_by::text \|\| '/%')`. | S |
 | 14 | ✅ **Overpass is called from every phone.** That's fine for a few users, but against the public servers' fair-use rules at scale, and their answers take 10–90 s. | Fetch Overpass server-side (Edge Function + the existing `supply_points` table) and let phones read Supabase. This also fixes #3 and helps ratings (#33). | M |
 
 ### Inefficiencies (battery, data, speed)
@@ -54,8 +54,8 @@ The findings below are what to fix next.
 | 17 | ✅ **Supply points are fetched for a whole rectangle.** A long diagonal route covers most of a country, and the query allows up to 5,000 rows. | Add a PostGIS RPC that returns points within 10 km of a simplified route line. | M |
 | 18 | **Supply points are fetched again every time a trip opens,** and on the Trips home screen. | Reuse saved points for a day unless you pull to refresh or add a place. | S |
 | 19 | **Many map markers are slow.** Supply markers are custom views (one timer each); hundreds of them are slow on Android and drain battery while the map moves. | Use small image markers per category (like fuel and water) and cluster when zoomed out. | M |
-| 20 | **Unused packages:** `expo-device`, `expo-glass-effect`, `expo-web-browser`. | Remove them with `npm uninstall`. | S |
-| 21 | **Template leftovers:** `scripts/reset-project.js` and its npm script; unused images `expo-badge*.png`, `expo-logo.png`, `logo-glow.png` (330 KB), `react-logo*.png`, `tutorial-web.png`, `tabIcons/`; `src/global.css` (old font variables); unused `SafariColors` and `suppliesFound`. | Delete them. | S |
+| 20 | ✅ **Unused packages:** `expo-device`, `expo-glass-effect`, `expo-web-browser`. | Remove them with `npm uninstall`. | S |
+| 21 | ✅ **Template leftovers:** `scripts/reset-project.js` and its npm script; unused images `expo-badge*.png`, `expo-logo.png`, `logo-glow.png` (330 KB), `react-logo*.png`, `tutorial-web.png`, `tabIcons/`; `src/global.css` (old font variables); unused `SafariColors` and `suppliesFound` (`suppliesFound` is used now, so it stays). | Delete them. | S |
 | 22 | **Duplicated code:** saved-JSON readers (`readSaved` / `readJson`, 3 copies), `close()` (5 copies), the subscribe/emit store pattern (trips, vehicle, map layers, i18n, supplies), form `Field`s (Vehicle, Add a place), route lines (Route and Supplies tabs), the `TERRAINS` list (2 copies). | Move them into shared `lib/store.ts`, `lib/saved.ts`, `components/form.tsx` and `components/button.tsx`. | M |
 
 ### Design and usability
