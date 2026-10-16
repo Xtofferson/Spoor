@@ -27,6 +27,8 @@ export const Colors = {
     borderDashed: '#8A6E4E',
     olive: '#5E6B3A',
     whatsapp: '#2F6B3A',
+    /** The greyed-out drawings, like the wheel in the sand on the landing page. */
+    illustration: '#9C958C',
     // Road surfaces, as in the prototype's route options.
     surfaceTar: '#3B2A1E',
     surfaceGravel: '#8A6E4E',
@@ -57,6 +59,7 @@ export const Colors = {
     borderDashed: '#8A6E4E',
     olive: '#8E9C5A',
     whatsapp: '#3E8A4C',
+    illustration: '#6F675E',
     // Tar is light here so it still shows against dark cards.
     surfaceTar: '#F3E7CF',
     surfaceGravel: '#8A6E4E',

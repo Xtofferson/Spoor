@@ -14,6 +14,7 @@ type Tab = { name: string; href: '/trips' | '/community' | '/maps' | '/me'; labe
 /**
  * The bottom tab bar from the mockups: Trips, Community, Maps and Me on a cream bar with a
  * dark-brown line on top; the open tab in burnt orange. It stays visible inside a trip.
+ * Home, first, goes back to the landing page.
  */
 export default function AppTabs() {
   const t = useT();
@@ -34,6 +35,7 @@ export default function AppTabs() {
       <TabSlot style={styles.flex} />
       <TabList asChild>
         <TabBar>
+          <HomeButton label={t('tabs.home')} />
           {tabs.map((tab) => (
             <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
               <TabButton tab={tab}>{tab.label}</TabButton>
@@ -61,6 +63,26 @@ function TabBar(props: TabListProps) {
         },
       ]}
     />
+  );
+}
+
+/** Back to the landing page, beside the tabs and styled like them. */
+function HomeButton({ label }: { label: string }) {
+  const theme = useTheme();
+  const color = theme.textSecondary;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.dismissTo('/')}
+      style={({ pressed }) => [styles.tab, pressed && styles.pressed]}>
+      <SymbolView
+        name={{ ios: 'house', android: 'home', web: 'home' }}
+        size={26}
+        tintColor={color}
+        weight="regular"
+      />
+      <ThemedText style={[styles.label, { color }]}>{label}</ThemedText>
+    </Pressable>
   );
 }
 

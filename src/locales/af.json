@@ -238,10 +238,19 @@
     "comingSoon": "Kom binnekort"
   },
   "tabs": {
+    "home": "Tuis",
     "trips": "Reise",
     "community": "Gemeenskap",
     "maps": "Kaarte",
     "me": "Ek"
+  },
+  "landing": {
+    "headline": "Volg die Spoor waar die teerpad ophou.",
+    "trips": "Beplan roetes, brandstof, water en kampe",
+    "nextTrip": "Volgende: {{name}}, {{date}}",
+    "community": "Plekke en wenke van ander reisigers",
+    "maps": "Jou roetes, en vanlyn-kaarte binnekort",
+    "me": "Jou voertuig, brandstofpryse en rekening"
   },
   "tripTabs": {
     "route": "Roete",

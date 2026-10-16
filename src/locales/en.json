@@ -238,10 +238,19 @@
     "comingSoon": "Coming soon"
   },
   "tabs": {
+    "home": "Home",
     "trips": "Trips",
     "community": "Community",
     "maps": "Maps",
     "me": "Me"
+  },
+  "landing": {
+    "headline": "Follow the Spoor where the tar ends.",
+    "trips": "Plan routes, fuel, water and camps",
+    "nextTrip": "Next: {{name}}, {{date}}",
+    "community": "Places and tips from other travellers",
+    "maps": "Your routes, and offline maps soon",
+    "me": "Your vehicle, fuel prices and account"
   },
   "tripTabs": {
     "route": "Route",

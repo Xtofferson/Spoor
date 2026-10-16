@@ -23,7 +23,7 @@ const FUEL_TYPES: FuelType[] = ['diesel', 'petrol'];
 
 function close() {
   if (router.canGoBack()) router.back();
-  else router.replace('/');
+  else router.replace('/trips');
 }
 
 export default function VehicleScreen() {

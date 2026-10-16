@@ -86,6 +86,7 @@ function RootStack() {
       {session && <TripSync userId={session.user.id} />}
       <Stack screenOptions={{ headerTitleStyle: { fontFamily: Fonts.display, fontSize: 20 } }}>
         <Stack.Protected guard={!!session}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="trip/new" options={{ presentation: 'modal', title: t('screens.newTrip') }} />
           <Stack.Screen name="edit-trip/[id]" options={{ presentation: 'modal', title: t('screens.editTrip') }} />

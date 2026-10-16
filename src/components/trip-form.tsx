@@ -91,7 +91,7 @@ function close() {
   if (router.canGoBack()) {
     router.back();
   } else {
-    router.replace('/');
+    router.replace('/trips');
   }
 }
 

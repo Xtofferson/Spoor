@@ -19,7 +19,7 @@ const PHOTO_WIDTH = 1280;
 
 function close() {
   if (router.canGoBack()) router.back();
-  else router.replace('/');
+  else router.replace('/trips');
 }
 
 export default function AddSupplyScreen() {

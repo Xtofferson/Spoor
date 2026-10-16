@@ -14,26 +14,19 @@ import { dateLocale, useLanguage, useT, type Translate } from '@/lib/i18n';
 import { categoryText } from '@/lib/supply-points';
 import { TripPlanProvider, useTripPlan } from '@/lib/trip-plan';
 import { useSyncStatus } from '@/lib/trip-sync';
-import { fromDateString, toDateString, tripDays, useTrips, type Trip } from '@/lib/trips';
+import {
+  fromDateString,
+  greetingKey,
+  splitTrips,
+  toDateString,
+  tripDays,
+  useTrips,
+  type Trip,
+} from '@/lib/trips';
 
 /** The wordmark's shape (720×220), shown 150 wide as in the mockup. */
 const WORDMARK_WIDTH = 150;
 const WORDMARK_HEIGHT = (WORDMARK_WIDTH * 220) / 720;
-
-/** "Good morning", "Good afternoon" or "Good evening", by the phone's clock. */
-function greetingKey(hour: number) {
-  if (hour < 12) return 'home.morning';
-  if (hour < 18) return 'home.afternoon';
-  return 'home.evening';
-}
-
-/** Trips still to come (or under way), soonest first, and past trips, latest first. */
-function splitTrips(trips: Trip[], today: string) {
-  const ends = (trip: Trip) => trip.endDate ?? trip.startDate;
-  const upcoming = trips.filter((trip) => ends(trip) >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
-  const past = trips.filter((trip) => ends(trip) < today).sort((a, b) => b.startDate.localeCompare(a.startDate));
-  return { upcoming, past };
-}
 
 /** The Trips tab, as in the "Trips home" mockup. */
 export default function TripsScreen() {

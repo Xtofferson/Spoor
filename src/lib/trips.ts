@@ -232,3 +232,18 @@ export function formatDateRange(startDate: string, endDate: string, locale = dat
   });
   return `${startText} – ${formatDate(endDate, locale)}`;
 }
+
+/** "Good morning", "Good afternoon" or "Good evening", by the phone's clock. */
+export function greetingKey(hour: number) {
+  if (hour < 12) return 'home.morning';
+  if (hour < 18) return 'home.afternoon';
+  return 'home.evening';
+}
+
+/** Trips still to come (or under way), soonest first, and past trips, latest first. */
+export function splitTrips(trips: Trip[], today: string) {
+  const ends = (trip: Trip) => trip.endDate ?? trip.startDate;
+  const upcoming = trips.filter((trip) => ends(trip) >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const past = trips.filter((trip) => ends(trip) < today).sort((a, b) => b.startDate.localeCompare(a.startDate));
+  return { upcoming, past };
+}
