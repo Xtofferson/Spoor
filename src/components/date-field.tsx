@@ -36,9 +36,10 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
       <ThemedView type="backgroundElement" style={[styles.field, styles.iosField, { borderColor: theme.border }]}>
         {/*
           A fixed, full-width frame: measured to zero width the picker is untappable, and sized
-          to its contents it sits on the box's top edge instead of in the middle.
+          to its contents it sits on the box's top edge instead of in the middle. Safe areas are
+          ignored (as Expo's own date picker does), or the picker is shifted inside the sheet.
         */}
-        <Host style={styles.iosHost} onLayoutContent={() => setLaidOut(true)}>
+        <Host style={styles.iosHost} ignoreSafeArea="all" onLayoutContent={() => setLaidOut(true)}>
           <DatePicker
             title={label}
             selection={fromDateString(value)}
