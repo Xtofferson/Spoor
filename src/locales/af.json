@@ -128,9 +128,12 @@
       "one": "{{count}} persoon",
       "other": "{{count}} mense"
     },
-    "advice": "Het omtrent {{litres}} L water nodig vir {{people}} oor {{days}}; jy dra {{carried}} L. {{fill}}",
+    "advice": "Omtrent {{days}} tot die volgende bekende waterpunt: het omtrent {{litres}} L nodig vir {{people}}; jy dra {{carried}} L. {{fill}}",
     "fillTreat": "Maak vol by {{from}} (suiwer dit eers) en dra meer.",
     "fill": "Maak vol by {{from}} en dra meer.",
+    "fillStart": "Maak vol voor jy {{from}} verlaat en dra meer.",
+    "lastBefore": "Laaste bekende waterpunt voor {{to}}",
+    "noneBefore": "Geen bekende waterpunt voor {{to}} nie",
     "drinking": "Drinkwater",
     "mayNeedTreating": "Moet dalk gesuiwer word",
     "notForDrinking": "Gemerk as nie vir drink nie",
@@ -139,8 +142,8 @@
     "carried": "{{litres}} L gedra",
     "daysOfWater": "dae se water teen {{litres}} L per persoon per dag",
     "peopleHint": "Stel die aantal mense wanneer jy die reis wysig.",
-    "between": "Tussen waterpunte",
-    "noneFound": "OpenStreetMap het geen waterpunte binne 5 km van hierdie roete nie, so die hele reis is een stuk. Dorpe en vulstasies verkoop dikwels water: vra plaaslik.",
+    "between": "Laaste bekende waterpunte",
+    "noneFound": "Geen bekende waterpunte binne 5 km van hierdie roete nie, so die hele reis is een stuk. Dorpe, vulstasies en kampe verkoop dikwels water: vra plaaslik.",
     "stretchDetail": "Omtrent {{days}} · het {{litres}} L van {{carried}} L nodig"
   },
   "supplies": {
@@ -216,7 +219,7 @@
       "other": "{{count}} op die roete"
     },
     "gapNote": "{{title}}: {{from}}",
-    "waterNote": "Water: neem genoeg vir {{days}} sonder ’n waterpunt ({{people}} × {{perDay}} liter × {{days}} = {{litres}} liter)",
+    "waterNote": "Water: neem genoeg vir {{days}} sonder ’n bekende waterpunt ({{people}} × {{perDay}} liter × {{days}} = {{litres}} liter)",
     "checkingAreas": "Gaan die roete na vir brandstof, water en voorrade… deel {{done}} van {{total}}",
     "incomplete": "OpenStreetMap was besig, so ’n deel van die roete is nog nie nagegaan nie en party plekke kan ontbreek. Tik Laai weer oor ’n paar minute.",
     "layerOnMap": "{{label}} op die kaart",
@@ -515,7 +518,7 @@
     "past": "Vorige reise",
     "upcoming": "Komende reise",
     "noFuelFor": "Geen vulstasie vir {{km}} km nie",
-    "waterShort": "Nie genoeg water vir {{days}} nie",
+    "waterShort": "Maak vol by {{from}}: {{km}} km tot die volgende bekende water",
     "onRoute": "{{label}} op die roete",
     "noSupplyFor": "Geen {{noun}} vir {{km}} km nie",
     "fuelCost": "≈ {{amount}} brandstof"

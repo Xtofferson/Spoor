@@ -8,7 +8,7 @@ import en from '@/locales/en.json';
 
 import { stretchAdvice, type FuelStretch, type Vehicle } from '../fuel';
 import { translate, type Translate } from '../i18n';
-import { formatDays, waterAdvice, type WaterStretch } from '../water';
+import { formatDays, waterAdvice, type WaterStop, type WaterStretch } from '../water';
 
 type Dictionary = { [key: string]: string | Dictionary };
 
@@ -84,8 +84,9 @@ describe('translate', () => {
 
     const short = { from: 'A', status: 'short', litresNeeded: 45, days: 3 } as WaterStretch;
     expect(formatDays(0.4, afrikaans)).toBe('½ dag');
-    expect(waterAdvice(short, { people: 3, waterLitres: 40 }, false, afrikaans)).toBe(
-      'Het omtrent 45 L water nodig vir 3 mense oor 3 dae; jy dra 40 L. Maak vol by A en dra meer.'
+    const fromStop = { label: 'A', places: [] } as unknown as WaterStop;
+    expect(waterAdvice(short, { people: 3, waterLitres: 40 }, fromStop, afrikaans)).toBe(
+      'Omtrent 3 dae tot die volgende bekende waterpunt: het omtrent 45 L nodig vir 3 mense; jy dra 40 L. Maak vol by A en dra meer.'
     );
   });
 });

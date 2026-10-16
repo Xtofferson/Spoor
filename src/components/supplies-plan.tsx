@@ -28,9 +28,10 @@ import { categoryText, gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan
 import { fromDateString } from '@/lib/trips';
 import {
   formatDays,
-  stopNeedsTreating,
   WATER_PER_PERSON_PER_DAY,
   waterAdvice,
+  waterStopBefore,
+  waterTitle,
   type WaterStop,
   type WaterStretch,
 } from '@/lib/water';
@@ -464,7 +465,7 @@ export function WaterCard({ vehicle, people }: { vehicle?: Vehicle; people: numb
   );
 }
 
-/** Each stretch between water points, and whether the water carried lasts it. */
+/** Each stretch between known water points, and whether the water carried lasts it. */
 export function WaterStretchList({
   vehicle,
   people,
@@ -492,10 +493,11 @@ export function WaterStretchList({
       {found &&
         waterLitres !== undefined &&
         stretches.map((stretch, index) => {
-          const fromStop = stops.find((stop) => stop.label === stretch.from);
+          const fromStop = waterStopBefore(stretch, stops);
           return (
             <StretchCard
               key={index}
+              title={stretch.status === 'short' ? waterTitle(stretch, fromStop, t) : undefined}
               from={stretch.from}
               to={stretch.to}
               startKm={stretch.startKm}
@@ -508,7 +510,7 @@ export function WaterStretchList({
                 litres: Math.ceil(stretch.litresNeeded),
                 carried: waterLitres,
               })}
-              advice={waterAdvice(stretch, { people, waterLitres }, !!fromStop && stopNeedsTreating(fromStop), t)}
+              advice={waterAdvice(stretch, { people, waterLitres }, fromStop, t)}
             />
           );
         })}

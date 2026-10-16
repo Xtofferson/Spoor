@@ -15,7 +15,6 @@ import { categoryText } from '@/lib/supply-points';
 import { TripPlanProvider, useTripPlan } from '@/lib/trip-plan';
 import { useSyncStatus } from '@/lib/trip-sync';
 import { fromDateString, toDateString, tripDays, useTrips, type Trip } from '@/lib/trips';
-import { formatDays } from '@/lib/water';
 
 /** The wordmark's shape (720×220), shown 150 wide as in the mockup. */
 const WORDMARK_WIDTH = 150;
@@ -99,7 +98,7 @@ function tripWarnings(plan: ReturnType<typeof useTripPlan>, t: Translate): strin
   const fuel = plan.fuelStretches.find((stretch) => stretch.status !== 'ok');
   if (fuel) warnings.push(t('home.noFuelFor', { km: Math.round(fuel.distanceKm).toLocaleString('en-US') }));
   const water = plan.waterStretches.find((stretch) => stretch.status === 'short');
-  if (water) warnings.push(t('home.waterShort', { days: formatDays(water.days, t) }));
+  if (water) warnings.push(t('home.waterShort', { from: water.from, km: Math.round(water.distanceKm).toLocaleString('en-US') }));
   const crossing = plan.supplyPlan?.crossings[0];
   if (crossing) warnings.push(t('home.onRoute', { label: categoryText(crossing.category, t).label }));
   const gap = plan.supplyPlan?.gaps[0];

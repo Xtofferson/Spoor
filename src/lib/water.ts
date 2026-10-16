@@ -114,19 +114,33 @@ export function formatDays(days: number, t: Translate = currentT): string {
   return t('water.days', { count: halves <= 2 ? 1 : 2, days: text });
 }
 
+/** The water point a stretch starts at, or undefined when it starts at the trip's start. */
+export function waterStopBefore(stretch: Stretch, stops: WaterStop[]): WaterStop | undefined {
+  return stops.find((stop) => stop.endKm === stretch.startKm);
+}
+
+/**
+ * A heading for a stretch the water carried won't last, e.g. "Last known water point before
+ * Maun". Water points are often missing from the map, so it says "known".
+ */
+export function waterTitle(stretch: Stretch, fromStop: WaterStop | undefined, t: Translate = currentT): string {
+  return t(fromStop ? 'water.lastBefore' : 'water.noneBefore', { to: stretch.to });
+}
+
 /** What to tell the travellers about a stretch the water carried won't last, if anything. */
 export function waterAdvice(
   stretch: WaterStretch,
   { people, waterLitres }: { people: number; waterLitres: number },
-  fromNeedsTreating: boolean,
+  fromStop: WaterStop | undefined,
   t: Translate = currentT
 ): string | undefined {
   if (stretch.status !== 'short') return undefined;
+  const fill = !fromStop ? 'water.fillStart' : stopNeedsTreating(fromStop) ? 'water.fillTreat' : 'water.fill';
   return t('water.advice', {
     litres: Math.ceil(stretch.litresNeeded),
     people: t('water.people', { count: people }),
     days: formatDays(stretch.days, t),
     carried: waterLitres,
-    fill: t(fromNeedsTreating ? 'water.fillTreat' : 'water.fill', { from: stretch.from }),
+    fill: t(fill, { from: stretch.from }),
   });
 }

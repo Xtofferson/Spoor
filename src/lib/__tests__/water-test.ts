@@ -6,8 +6,10 @@ import {
   nightsAt,
   stopNeedsTreating,
   waterAdvice,
+  waterStopBefore,
   waterStopsAlong,
   waterStretches,
+  waterTitle,
 } from '../water';
 
 import { parseOverpass } from '../../../supabase/functions/supplies/osm';
@@ -106,9 +108,22 @@ describe('waterStretches', () => {
     const [stretch] = waterStretches(line, stops, { people: 3, waterLitres: 40 }, [0, 2, 0]);
     // 3 days × 5 L × 3 people = 45 L.
     expect(stretch.status).toBe('short');
-    expect(waterAdvice(stretch, { people: 3, waterLitres: 40 }, false)).toBe(
-      'Needs about 45 L of water for 3 people over 3 days; you carry 40 L. Fill up at A and carry more.'
+    const fromStop = waterStopBefore(stretch, stops);
+    expect(fromStop?.label).toBe('A');
+    expect(waterTitle(stretch, fromStop)).toBe('Last known water point before C');
+    expect(waterAdvice(stretch, { people: 3, waterLitres: 40 }, fromStop)).toBe(
+      'About 3 days to the next known water point: needs about 45 L for 3 people; you carry 40 L. Fill up at A and carry more.'
     );
+  });
+
+  it('says to fill up before leaving when there’s no known water point at the start', () => {
+    const stops = waterStopsAlong(line, [water('w2', 400)]);
+    const [stretch] = waterStretches(line, stops, { people: 3, waterLitres: 20 }, [0, 2, 0]);
+    expect(stretch.from).toBe('A');
+    const fromStop = waterStopBefore(stretch, stops);
+    expect(fromStop).toBeUndefined();
+    expect(waterTitle(stretch, fromStop)).toMatch(/^No known water point before /);
+    expect(waterAdvice(stretch, { people: 3, waterLitres: 20 }, fromStop)).toMatch(/Fill up before you leave A/);
   });
 
   it('doesn’t count nights at a stop with water', () => {
@@ -130,11 +145,11 @@ describe('waterStretches', () => {
     const stops = waterStopsAlong(line, [water('well', 0, { kind: 'Well', needsTreating: true })]);
     expect(stopNeedsTreating(stops[0])).toBe(true);
     const [stretch] = waterStretches(line, stops, { people: 4, waterLitres: 20 }, [0, 2, 0]);
-    expect(waterAdvice(stretch, { people: 4, waterLitres: 20 }, true)).toMatch(/Fill up at A \(treat it first\)/);
+    expect(waterAdvice(stretch, { people: 4, waterLitres: 20 }, stops[0])).toMatch(/Fill up at A \(treat it first\)/);
   });
 
   it('gives no advice when there’s enough water', () => {
     const [stretch] = waterStretches(line, [], { people: 1, waterLitres: 100 }, [0, 2, 0]);
-    expect(waterAdvice(stretch, { people: 1, waterLitres: 100 }, false)).toBeUndefined();
+    expect(waterAdvice(stretch, { people: 1, waterLitres: 100 }, undefined)).toBeUndefined();
   });
 });

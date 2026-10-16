@@ -128,9 +128,12 @@
       "one": "{{count}} person",
       "other": "{{count}} people"
     },
-    "advice": "Needs about {{litres}} L of water for {{people}} over {{days}}; you carry {{carried}} L. {{fill}}",
+    "advice": "About {{days}} to the next known water point: needs about {{litres}} L for {{people}}; you carry {{carried}} L. {{fill}}",
     "fillTreat": "Fill up at {{from}} (treat it first) and carry more.",
     "fill": "Fill up at {{from}} and carry more.",
+    "fillStart": "Fill up before you leave {{from}} and carry more.",
+    "lastBefore": "Last known water point before {{to}}",
+    "noneBefore": "No known water point before {{to}}",
     "drinking": "Drinking water",
     "mayNeedTreating": "May need treating",
     "notForDrinking": "Mapped as not for drinking",
@@ -139,8 +142,8 @@
     "carried": "{{litres}} L carried",
     "daysOfWater": "days of water at {{litres}} L per person per day",
     "peopleHint": "Set the number of people when you edit the trip.",
-    "between": "Between water points",
-    "noneFound": "OpenStreetMap has no water points within 5 km of this route, so the whole trip is one stretch. Towns and fuel stations often sell water: check locally.",
+    "between": "Last known water points",
+    "noneFound": "No known water points within 5 km of this route, so the whole trip is one stretch. Towns, fuel stations and camps often sell water: check locally.",
     "stretchDetail": "About {{days}} · needs {{litres}} L of {{carried}} L"
   },
   "supplies": {
@@ -216,7 +219,7 @@
       "other": "{{count}} on the route"
     },
     "gapNote": "{{title}}: {{from}}",
-    "waterNote": "Water: carry enough for {{days}} without a water point ({{people}} × {{perDay}} litres × {{days}} = {{litres}} litres)",
+    "waterNote": "Water: carry enough for {{days}} without a known water point ({{people}} × {{perDay}} litres × {{days}} = {{litres}} litres)",
     "checkingAreas": "Checking the route for fuel, water and supplies… part {{done}} of {{total}}",
     "incomplete": "OpenStreetMap was busy, so part of the route hasn’t been checked yet and some places may be missing. Tap Refresh in a few minutes.",
     "layerOnMap": "{{label}} on the map",
@@ -515,7 +518,7 @@
     "past": "Past trips",
     "upcoming": "Upcoming trips",
     "noFuelFor": "No fuel for {{km}} km",
-    "waterShort": "Not enough water for {{days}}",
+    "waterShort": "Fill up at {{from}}: {{km}} km to the next known water",
     "onRoute": "{{label}} on the route",
     "noSupplyFor": "No {{noun}} for {{km}} km",
     "fuelCost": "≈ {{amount}} fuel"
