@@ -25,14 +25,20 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
   const locale = dateLocale(useLanguage());
   const theme = useTheme();
   const [dialogOpen, setDialogOpen] = useState(false);
+  // iOS: the picker sits on the box's top edge until it's updated once, so update it as soon
+  // as it has laid out (choosing a date did the same before).
+  const [, setLaidOut] = useState(false);
   const minimum = minimumDate ? fromDateString(minimumDate) : undefined;
   const maximum = maximumDate ? fromDateString(maximumDate) : undefined;
 
   if (Platform.OS === 'ios') {
     return (
       <ThemedView type="backgroundElement" style={[styles.field, styles.iosField, { borderColor: theme.border }]}>
-        {/* Full-width row so the native picker isn't measured to zero width and becomes untappable. */}
-        <Host matchContents={{ vertical: true }} style={styles.iosHost}>
+        {/*
+          A fixed, full-width frame: measured to zero width the picker is untappable, and sized
+          to its contents it sits on the box's top edge instead of in the middle.
+        */}
+        <Host style={styles.iosHost} onLayoutContent={() => setLaidOut(true)}>
           <DatePicker
             title={label}
             selection={fromDateString(value)}
@@ -75,6 +81,9 @@ export function DateField({ label, value, onChange, minimumDate, maximumDate }: 
   );
 }
 
+/** The compact picker's height: with the box's padding, the same 52 pt as a text field. */
+const IOS_PICKER_HEIGHT = 44;
+
 const styles = StyleSheet.create({
   field: {
     justifyContent: 'center',
@@ -89,6 +98,7 @@ const styles = StyleSheet.create({
   },
   iosHost: {
     width: '100%',
+    height: IOS_PICKER_HEIGHT,
   },
   androidField: {
     flexDirection: 'row',
