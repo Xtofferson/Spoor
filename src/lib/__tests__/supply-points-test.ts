@@ -12,6 +12,7 @@ import {
   pointFromRow,
   pointsNearRoute,
   rowFromPoint,
+  shortlistPoints,
   supplyCategories,
   supplyFormErrors,
   waterPointsFrom,
@@ -196,5 +197,43 @@ describe('warnings along the route', () => {
 
   it('has no gap warnings for categories without a gap, like checkpoints', () => {
     expect(planSupplies(line, [], [checkpoint as SupplyCategory]).gaps).toEqual([]);
+  });
+});
+
+describe('fewer butcheries on the map', () => {
+  const today = '2026-10-16';
+  // Trip stops are at km 0 (A), 300 (B) and 600 (C).
+  const plain = (id: string, km: number, extra: Partial<SupplyPoint> = {}) =>
+    point(id, 'butcher', km, { source: 'OSM', osmId: `node/${id.length}`, ...extra });
+
+  it('shows the best butchery at each stop and the best three others along the route', () => {
+    const points = [
+      plain('a-plain', 2),
+      plain('a-best', 4, { phone: '+267 1' }),
+      plain('b-only', 305),
+      ...[100, 150, 200, 250, 400, 450].map((km) => plain(`way-${km}`, km)),
+      plain('way-confirmed', 500, { lastConfirmed: '2026-05-01' }),
+      point('way-traveller', 'butcher', 350),
+    ];
+    const shown = shortlistPoints(line, points, ['butcher'], today).map((p) => p.id);
+    expect(shown).toContain('a-best');
+    expect(shown).not.toContain('a-plain');
+    expect(shown).toContain('b-only');
+    // The best others: the traveller's and the recently confirmed, then the closest of the rest.
+    expect(shown).toEqual(expect.arrayContaining(['way-traveller', 'way-confirmed']));
+    expect(shown.filter((id) => id.startsWith('way-'))).toHaveLength(3);
+    expect(shown).toHaveLength(5);
+  });
+
+  it('always shows places added on this phone, and leaves other categories alone', () => {
+    const points = [
+      ...[100, 150, 200, 250, 350].map((km) => plain(`b-${km}`, km)),
+      point('mine', 'butcher', 220, { pending: true }),
+      point('wood', 'firewood', 120),
+      point('wood2', 'firewood', 130),
+    ];
+    const shown = shortlistPoints(line, points, ['butcher'], today).map((p) => p.id);
+    expect(shown).toEqual(expect.arrayContaining(['mine', 'wood', 'wood2']));
+    expect(shown.filter((id) => id.startsWith('b-'))).toHaveLength(3);
   });
 });

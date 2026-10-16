@@ -15,6 +15,7 @@ import {
   type PlaceStop,
   type RouteLine,
   type Settlement,
+  tripStopsAlong,
   type Stretch,
   type WaterKind,
   type WaterPoint,
@@ -298,6 +299,61 @@ export function waterPointsFrom(points: SupplyPoint[]): WaterPoint[] {
 export function pointsNearRoute(line: RouteLine, points: SupplyPoint[]): SupplyPoint[] {
   const radiusKm = SUPPLY_SEARCH_RADIUS_METERS / 1000;
   return points.filter((point) => locateOnRoute(line, point.coordinates).offRouteKm <= radiusKm + 0.5);
+}
+
+// -- Fewer suggestions on the map -----------------------------------------------------
+
+/** Categories with so many places that only the best are suggested on the map. */
+export const SHORTLISTED_CATEGORIES = ['butcher'];
+/** How many of a shortlisted category to suggest along the route, besides one per stop. */
+const BEST_ALONG_ROUTE = 3;
+/** A place this close to a trip stop, along the route, counts as at that stop. */
+const AT_STOP_KM = 15;
+const DAY_MS = 86_400_000;
+
+/**
+ * How good a suggestion a place is, until there are ratings: added by a traveller, confirmed
+ * in the last year, and with a phone number or opening hours each count.
+ */
+function suggestionScore(point: SupplyPoint, today: string): number {
+  const confirmedRecently =
+    !!point.lastConfirmed && Date.parse(today) - Date.parse(point.lastConfirmed) <= 365 * DAY_MS;
+  return (
+    (point.source === 'user' ? 2 : 0) +
+    (confirmedRecently ? 2 : 0) +
+    (point.phone || point.openingHours ? 1 : 0)
+  );
+}
+
+/**
+ * The places to show on the map: for shortlisted categories like butcheries, only the best one
+ * at each trip stop and the best three others along the route (the best first, then the
+ * closest to the road). Places added on this phone always show, and other categories are
+ * left as they are. Warnings still use every place, so a hidden butchery isn't a gap.
+ */
+export function shortlistPoints(
+  line: RouteLine,
+  points: SupplyPoint[],
+  categories: string[] = SHORTLISTED_CATEGORIES,
+  today: string = new Date().toISOString().slice(0, 10)
+): SupplyPoint[] {
+  const shown = new Set<string>();
+  const tripStops = tripStopsAlong(line);
+  for (const category of categories) {
+    const candidates = points
+      .filter((point) => point.category === category && !point.pending)
+      .map((point) => ({ point, score: suggestionScore(point, today), ...locateOnRoute(line, point.coordinates) }))
+      .sort((a, b) => b.score - a.score || a.offRouteKm - b.offRouteKm);
+    for (const stop of tripStops) {
+      const best = candidates.find((c) => !shown.has(c.point.id) && Math.abs(c.alongKm - stop.km) <= AT_STOP_KM);
+      if (best) shown.add(best.point.id);
+    }
+    candidates
+      .filter((c) => !shown.has(c.point.id))
+      .slice(0, BEST_ALONG_ROUTE)
+      .forEach((c) => shown.add(c.point.id));
+  }
+  return points.filter((point) => !categories.includes(point.category) || point.pending || shown.has(point.id));
 }
 
 // -- Warnings -----------------------------------------------------------------------

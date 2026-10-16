@@ -29,6 +29,7 @@ import {
   mergePoints,
   planSupplies,
   pointsNearRoute,
+  shortlistPoints,
   supplyCategories,
   WATER,
   waterPointsFrom,
@@ -81,6 +82,8 @@ export type TripPlan = {
 
   categories: SupplyCategory[];
   supplyPoints: SupplyPoint[];
+  /** The supply points to show on the map: only the best butcheries, for example. */
+  shownSupplyPoints: SupplyPoint[];
   /** Places added on this phone that haven't uploaded yet. */
   pending: SupplyPoint[];
   supplyPlan?: SupplyPlan;
@@ -183,6 +186,10 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     [line, points]
   );
   useRememberPoints(supplyPoints);
+  const shownSupplyPoints = useMemo(
+    () => (line ? shortlistPoints(line, supplyPoints) : supplyPoints),
+    [line, supplyPoints]
+  );
   const supplyPlan = useMemo(
     () => (line ? planSupplies(line, supplyPoints, categories, found?.settlements) : undefined),
     [line, supplyPoints, categories, found]
@@ -210,6 +217,7 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     dryStops,
     categories,
     supplyPoints,
+    shownSupplyPoints,
     pending,
     supplyPlan,
   };

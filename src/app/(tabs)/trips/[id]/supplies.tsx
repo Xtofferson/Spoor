@@ -43,7 +43,7 @@ export default function SuppliesTab() {
   const t = useT();
   const { height } = useWindowDimensions();
   const plan = useTripPlan();
-  const { trip, route, vehicle, people, supplies, fuelStops, plannedFuelStops, waterStops, supplyPoints, categories } =
+  const { trip, route, vehicle, people, supplies, fuelStops, plannedFuelStops, waterStops, shownSupplyPoints, categories } =
     plan;
 
   const lines: MapLine[] = useMemo(
@@ -97,7 +97,7 @@ export default function SuppliesTab() {
           icon: treat || undrinkable ? WATER_TREAT_ICON : WATER_ICON,
         };
       }),
-      ...supplyPoints.flatMap((point) => {
+      ...shownSupplyPoints.flatMap((point) => {
         const category = categories.find((c) => c.id === point.category);
         if (!category || hiddenLayers.includes(category.id)) return [];
         const text = categoryText(category, t);
@@ -118,7 +118,7 @@ export default function SuppliesTab() {
         ];
       }),
     ],
-    [fuelStops, plannedFuelStops, waterStops, supplyPoints, categories, hiddenLayers, t]
+    [fuelStops, plannedFuelStops, waterStops, shownSupplyPoints, categories, hiddenLayers, t]
   );
 
   const [showDetails, setShowDetails] = useState(false);
