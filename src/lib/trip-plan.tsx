@@ -82,7 +82,7 @@ export type TripPlan = {
 
   categories: SupplyCategory[];
   supplyPoints: SupplyPoint[];
-  /** The supply points to show on the map: only the best butcheries, for example. */
+  /** The supply points to show on the map: only the best butcheries and firewood sellers. */
   shownSupplyPoints: SupplyPoint[];
   /** Places added on this phone that haven't uploaded yet. */
   pending: SupplyPoint[];

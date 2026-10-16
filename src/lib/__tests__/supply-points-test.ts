@@ -200,7 +200,7 @@ describe('warnings along the route', () => {
   });
 });
 
-describe('fewer butcheries on the map', () => {
+describe('fewer butcheries and firewood sellers on the map', () => {
   const today = '2026-10-16';
   // Trip stops are at km 0 (A), 300 (B) and 600 (C).
   const plain = (id: string, km: number, extra: Partial<SupplyPoint> = {}) =>
@@ -235,5 +235,15 @@ describe('fewer butcheries on the map', () => {
     const shown = shortlistPoints(line, points, ['butcher'], today).map((p) => p.id);
     expect(shown).toEqual(expect.arrayContaining(['mine', 'wood', 'wood2']));
     expect(shown.filter((id) => id.startsWith('b-'))).toHaveLength(3);
+  });
+
+  it('shortlists firewood too, but never hides checkpoints', () => {
+    const points = [
+      ...[100, 150, 200, 250, 350].map((km) => point(`wood-${km}`, 'firewood', km, { source: 'OSM' })),
+      ...[120, 220].map((km) => point(`gate-${km}`, 'vet_checkpoint', km, { source: 'OSM' })),
+    ];
+    const shown = shortlistPoints(line, points, undefined, today).map((p) => p.id);
+    expect(shown.filter((id) => id.startsWith('wood-'))).toHaveLength(3);
+    expect(shown).toEqual(expect.arrayContaining(['gate-120', 'gate-220']));
   });
 });

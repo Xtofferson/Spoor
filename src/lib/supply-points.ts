@@ -304,7 +304,7 @@ export function pointsNearRoute(line: RouteLine, points: SupplyPoint[]): SupplyP
 // -- Fewer suggestions on the map -----------------------------------------------------
 
 /** Categories with so many places that only the best are suggested on the map. */
-export const SHORTLISTED_CATEGORIES = ['butcher'];
+export const SHORTLISTED_CATEGORIES = ['butcher', 'firewood'];
 /** How many of a shortlisted category to suggest along the route, besides one per stop. */
 const BEST_ALONG_ROUTE = 3;
 /** A place this close to a trip stop, along the route, counts as at that stop. */
@@ -326,10 +326,11 @@ function suggestionScore(point: SupplyPoint, today: string): number {
 }
 
 /**
- * The places to show on the map: for shortlisted categories like butcheries, only the best one
- * at each trip stop and the best three others along the route (the best first, then the
- * closest to the road). Places added on this phone always show, and other categories are
- * left as they are. Warnings still use every place, so a hidden butchery isn't a gap.
+ * The places to show on the map: for shortlisted categories (butcheries and firewood), only
+ * the best one at each trip stop and the best three others along the route (the best first,
+ * then the closest to the road). Places added on this phone always show, and other categories,
+ * like checkpoints, are left as they are. Warnings still use every place, so a hidden
+ * butchery isn't a gap.
  */
 export function shortlistPoints(
   line: RouteLine,
