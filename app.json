@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "spoor",
+    "name": "Spoor",
     "slug": "spoor",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,9 +8,14 @@
     "scheme": "spoor",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.xtofferson.spoor",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.xtofferson.spoor",
       "adaptiveIcon": {
         "backgroundColor": "#5E6B3A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
