@@ -5,6 +5,7 @@ import {
   formatDays,
   nightsAt,
   stopNeedsTreating,
+  stopsWithoutWater,
   waterAdvice,
   waterStopBefore,
   waterStopsAlong,
@@ -151,5 +152,13 @@ describe('waterStretches', () => {
   it('gives no advice when there’s enough water', () => {
     const [stretch] = waterStretches(line, [], { people: 1, waterLitres: 100 }, [0, 2, 0]);
     expect(waterAdvice(stretch, { people: 1, waterLitres: 100 }, undefined)).toBeUndefined();
+  });
+
+  it('lists the stops with no known water nearby', () => {
+    // The route runs A (km 0) → B (km 200) → C (km 400).
+    const stops = waterStopsAlong(line, [water('w1', 0), water('wB', 195)]);
+    expect(stopsWithoutWater(line, stops)).toEqual(['C']);
+    const everywhere = waterStopsAlong(line, [water('wB', 205), water('wC', 400)]);
+    expect(stopsWithoutWater(line, everywhere)).toEqual([]);
   });
 });

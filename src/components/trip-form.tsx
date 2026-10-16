@@ -15,7 +15,7 @@ import {
 import { DateField } from '@/components/date-field';
 import { canPickOnMap, LocationPicker } from '@/components/location-picker';
 import { ThemedText } from '@/components/themed-text';
-import { ActionBar, Button, Card, Field, IconButton, Input, MIN_TOUCH, TextButton } from '@/components/ui';
+import { ActionBar, Button, Card, Field, IconButton, Input, MIN_TOUCH, Stepper, TextButton } from '@/components/ui';
 import { BorderWidth, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { usePlaceSuggestions } from '@/lib/place-search';
@@ -25,6 +25,7 @@ import { moveStopKeepingDates, normalizeStopDates, previousStopDate } from '@/li
 import {
   createId,
   deleteTrip,
+  MAX_PEOPLE,
   saveTrip,
   toDateString,
   tripDays,
@@ -32,6 +33,7 @@ import {
   type Trip,
 } from '@/lib/trips';
 import { useT, type Translate } from '@/lib/i18n';
+import { WATER_PER_PERSON_PER_DAY } from '@/lib/water';
 
 function stopLabel(index: number, count: number, t: Translate) {
   if (index === 0) return t('tripForm.origin');
@@ -101,9 +103,6 @@ export function TripForm({ trip }: { trip?: Trip }) {
   const [name, setName] = useState(trip?.name ?? '');
   const [people, setPeople] = useState(trip?.people ?? 1);
 
-  function changePeople(by: number) {
-    setPeople((current) => Math.min(MAX_PEOPLE, Math.max(1, current + by)));
-  }
   const [stops, setStops] = useState<Stop[]>(() => initialStops(trip));
 
   const origin = stops[0];
@@ -229,28 +228,24 @@ export function TripForm({ trip }: { trip?: Trip }) {
         <View style={styles.section}>
           <ThemedText type="heading">{t('tripForm.people')}</ThemedText>
           <Card style={styles.peopleRow}>
-            <ThemedText style={styles.flex}>{t('tripForm.peopleHint')}</ThemedText>
-            <View
-              style={styles.stepper}
-              accessibilityRole="adjustable"
-              accessibilityLabel={t('tripForm.people')}
-              accessibilityValue={{ now: people, min: 1, max: MAX_PEOPLE }}
-              accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-              onAccessibilityAction={(event) => changePeople(event.nativeEvent.actionName === 'increment' ? 1 : -1)}>
-              <StepButton
-                label="−"
-                accessibilityLabel={t('tripForm.fewerPeople')}
-                disabled={people <= 1}
-                onPress={() => changePeople(-1)}
-              />
-              <ThemedText style={styles.peopleCount}>{people}</ThemedText>
-              <StepButton
-                label="+"
-                accessibilityLabel={t('tripForm.morePeople')}
-                disabled={people >= MAX_PEOPLE}
-                onPress={() => changePeople(1)}
-              />
+            <View style={styles.flex}>
+              <ThemedText style={styles.peopleLabel}>{t('water.people', { count: people })}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {t('tripForm.peopleHint', {
+                  litres: people * WATER_PER_PERSON_PER_DAY,
+                  perPerson: WATER_PER_PERSON_PER_DAY,
+                })}
+              </ThemedText>
             </View>
+            <Stepper
+              label={t('tripForm.people')}
+              value={people}
+              min={1}
+              max={MAX_PEOPLE}
+              onChange={setPeople}
+              decreaseLabel={t('tripForm.fewerPeople')}
+              increaseLabel={t('tripForm.morePeople')}
+            />
           </Card>
         </View>
 
@@ -464,41 +459,6 @@ function StopSuggestions({
   );
 }
 
-/** Most people on one trip, matching the limit in Supabase. */
-const MAX_PEOPLE = 20;
-
-function StepButton({
-  label,
-  accessibilityLabel,
-  disabled,
-  onPress,
-}: {
-  label: string;
-  accessibilityLabel: string;
-  disabled?: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.stepButton,
-        { borderColor: theme.border, backgroundColor: theme.background },
-        disabled && styles.disabled,
-        pressed && styles.pressed,
-      ]}>
-      <ThemedText style={styles.stepLabel}>
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
@@ -513,31 +473,11 @@ const styles = StyleSheet.create({
   peopleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.two,
     paddingVertical: 10,
     paddingRight: 10,
   },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  stepButton: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.pill,
-    borderWidth: BorderWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepLabel: {
-    fontSize: 22,
-    lineHeight: 26,
-    fontWeight: 600,
-  },
-  peopleCount: {
-    minWidth: 28,
-    textAlign: 'center',
-    fontSize: 18,
+  peopleLabel: {
     fontWeight: 600,
   },
   section: {
@@ -606,9 +546,6 @@ const styles = StyleSheet.create({
   },
   save: {
     flex: 1.4,
-  },
-  disabled: {
-    opacity: 0.4,
   },
   pressed: {
     opacity: 0.7,

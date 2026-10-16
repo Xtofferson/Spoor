@@ -20,6 +20,8 @@ import {
 export const WATER_PER_PERSON_PER_DAY = 5;
 /** Driving time that counts as a day of travel: a long day behind the wheel. */
 export const DRIVING_HOURS_PER_DAY = 8;
+/** Known water this close to a trip stop, along the route, counts as water at the stop. */
+const WATER_AT_STOP_KM = 10;
 /** A trip stop this close to either end of a stretch is at the water point, so its nights don't count. */
 const AT_WATER_POINT_KM = 3;
 
@@ -50,6 +52,22 @@ export function waterKindLabel(kind: WaterKind, t: Translate = currentT): string
 /** Whether a stop's water needs treating: all its water points are wells or springs. */
 export function stopNeedsTreating(stop: WaterStop): boolean {
   return stop.places.length > 0 && stop.places.every((place) => place.needsTreating);
+}
+
+/**
+ * The trip's stops after the start with no known water point nearby. When every stop has
+ * water, planning water is optional: the travellers can fill up wherever they stop.
+ */
+export function stopsWithoutWater(line: RouteLine, stops: WaterStop[]): string[] {
+  return tripStopsAlong(line)
+    .slice(1)
+    .filter(
+      (tripStop) =>
+        !stops.some(
+          (stop) => tripStop.km >= stop.startKm - WATER_AT_STOP_KM && tripStop.km <= stop.endKm + WATER_AT_STOP_KM
+        )
+    )
+    .map((tripStop) => tripStop.name);
 }
 
 /** Nights spent at a trip stop, from its arrive and leave dates (`YYYY-MM-DD`). */

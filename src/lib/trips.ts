@@ -167,6 +167,13 @@ export function saveTrip(trip: Trip) {
 }
 
 /** Saves the trip's chosen fuel stops. */
+/** Most people on one trip, matching the limit in Supabase. */
+export const MAX_PEOPLE = 20;
+
+export function saveTripPeople(trip: Trip, people: number) {
+  saveTrip({ ...trip, people, updatedAt: Date.now() });
+}
+
 export function saveFuelStops(trip: Trip, fuelStops: FuelStopChoice[]) {
   saveTrip({ ...trip, fuelStops: fuelStops.length > 0 ? fuelStops : undefined, updatedAt: Date.now() });
 }

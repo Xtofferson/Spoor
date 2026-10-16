@@ -288,6 +288,73 @@ export function Chip({
 }
 
 /** The bar at the bottom of a form, e.g. Cancel and Save, above the home indicator. */
+/**
+ * A number with − and + buttons, e.g. the people on a trip. Screen readers can swipe up and
+ * down to change it.
+ */
+export function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+  decreaseLabel,
+  increaseLabel,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+  decreaseLabel: string;
+  increaseLabel: string;
+}) {
+  const change = (by: number) => onChange(Math.min(max, Math.max(min, value + by)));
+  return (
+    <View
+      style={styles.stepper}
+      accessibilityRole="adjustable"
+      accessibilityLabel={label}
+      accessibilityValue={{ now: value, min, max }}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={(event) => change(event.nativeEvent.actionName === 'increment' ? 1 : -1)}>
+      <StepButton label="−" accessibilityLabel={decreaseLabel} disabled={value <= min} onPress={() => change(-1)} />
+      <ThemedText style={styles.stepperValue}>{value}</ThemedText>
+      <StepButton label="+" accessibilityLabel={increaseLabel} disabled={value >= max} onPress={() => change(1)} />
+    </View>
+  );
+}
+
+function StepButton({
+  label,
+  accessibilityLabel,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  accessibilityLabel: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.stepButton,
+        { borderColor: theme.border, backgroundColor: theme.background },
+        disabled && styles.disabled,
+        pressed && styles.pressed,
+      ]}>
+      <ThemedText style={styles.stepLabel}>{label}</ThemedText>
+    </Pressable>
+  );
+}
+
 export function ActionBar({ children }: { children: ReactNode }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -402,6 +469,30 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontSize: 15,
     lineHeight: 20,
+    fontWeight: 600,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  stepButton: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.pill,
+    borderWidth: BorderWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepLabel: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: 600,
+  },
+  stepperValue: {
+    minWidth: 28,
+    textAlign: 'center',
+    fontSize: 18,
     fontWeight: 600,
   },
   actionBar: {

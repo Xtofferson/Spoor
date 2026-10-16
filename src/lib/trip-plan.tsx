@@ -38,7 +38,14 @@ import {
 } from '@/lib/supply-points';
 import type { Trip } from '@/lib/trips';
 import { useVehicle } from '@/lib/vehicle';
-import { nightsAt, waterStopsAlong, waterStretches, type WaterStop, type WaterStretch } from '@/lib/water';
+import {
+  nightsAt,
+  stopsWithoutWater,
+  waterStopsAlong,
+  waterStretches,
+  type WaterStop,
+  type WaterStretch,
+} from '@/lib/water';
 
 const NO_CHOICES: FuelStopChoice[] = [];
 
@@ -66,6 +73,11 @@ export type TripPlan = {
 
   waterStops: WaterStop[];
   waterStretches: WaterStretch[];
+  /**
+   * Trip stops with no known water nearby, once the route's water is found. Empty means water
+   * planning is optional.
+   */
+  dryStops?: string[];
 
   categories: SupplyCategory[];
   supplyPoints: SupplyPoint[];
@@ -138,6 +150,10 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     () => (line && found ? waterStopsAlong(line, waterPoints, found.settlements, t) : []),
     [line, found, waterPoints, t]
   );
+  const dryStops = useMemo(
+    () => (line && found ? stopsWithoutWater(line, waterStops) : undefined),
+    [line, found, waterStops]
+  );
   // Nights at each trip stop on the route, in route order, from its arrive and leave dates.
   const nights = useMemo(
     () =>
@@ -191,6 +207,7 @@ export function TripPlanProvider({ trip, children }: PropsWithChildren<{ trip: T
     budget,
     waterStops,
     waterStretches: waterStretchList,
+    dryStops,
     categories,
     supplyPoints,
     pending,

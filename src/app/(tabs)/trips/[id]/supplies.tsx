@@ -14,6 +14,7 @@ import {
   SuppliesSource,
   SupplyWarnings,
   WaterCard,
+  WaterOptionalNote,
   WaterStretchList,
 } from '@/components/supplies-plan';
 import { ThemedText } from '@/components/themed-text';
@@ -127,9 +128,12 @@ export default function SuppliesTab() {
     setAddingPlace(false);
     router.push({ pathname: '/supply/new', params: { lat: String(lat), lon: String(lon) } });
   };
-  // Without a vehicle (or the water it carries), the cards asking for it stay in view.
+  // Without a vehicle, the card asking for it stays in view.
   const needsVehicle = !vehicle;
-  const needsWater = !!vehicle && vehicle.waterLitres === undefined;
+  // Water is planned up front when a stop has no known water; otherwise it's optional.
+  const [planWater, setPlanWater] = useState(false);
+  const waterOptional = plan.dryStops?.length === 0;
+  const waterOnTop = !!plan.dryStops && (!waterOptional || planWater);
 
   const tripLitres = vehicle && route ? route.legs.reduce((sum, leg) => sum + legFuelLitres(leg, vehicle.consumption), 0) : undefined;
 
@@ -188,7 +192,11 @@ export default function SuppliesTab() {
       {route && (
         <>
           {needsVehicle && <FuelRangeCard />}
-          {needsWater && <WaterCard vehicle={vehicle} people={people} />}
+          {waterOnTop ? (
+            <WaterCard trip={trip} vehicle={vehicle} people={people} dryStops={plan.dryStops} />
+          ) : (
+            waterOptional && <WaterOptionalNote onPlan={() => setPlanWater(true)} />
+          )}
 
           <View style={styles.details}>
             <TextButton
@@ -205,7 +213,7 @@ export default function SuppliesTab() {
                 supplies={supplies}
                 stopCount={fuelStops.length}
               />
-              {!needsWater && <WaterCard vehicle={vehicle} people={people} />}
+              {!waterOnTop && <WaterCard trip={trip} vehicle={vehicle} people={people} dryStops={plan.dryStops} />}
               <WaterStretchList
                 vehicle={vehicle}
                 people={people}

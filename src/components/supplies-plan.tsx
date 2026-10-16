@@ -6,7 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Note } from '@/components/trip-tab';
-import { Button, Card, MIN_TOUCH, TextButton } from '@/components/ui';
+import { Button, Card, MIN_TOUCH, Stepper, TextButton } from '@/components/ui';
 import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -25,7 +25,7 @@ import { formatRand, oldestPriceDate, type FuelBudget } from '@/lib/fuel-budget'
 import { dateLocale, useT, type Translate } from '@/lib/i18n';
 import type { SavedSupplies, SuppliesState } from '@/lib/route-supplies';
 import { categoryText, gapAdvice, gapTitle, type SupplyCategory, type SupplyPlan } from '@/lib/supply-points';
-import { fromDateString } from '@/lib/trips';
+import { fromDateString, MAX_PEOPLE, saveTripPeople, type Trip } from '@/lib/trips';
 import {
   formatDays,
   WATER_PER_PERSON_PER_DAY,
@@ -424,44 +424,98 @@ function halfDaysDown(days: number): string {
   return halves % 2 === 0 ? `${whole}` : whole === 0 ? '½' : `${whole}½`;
 }
 
-/** How much water is carried, for how many people, and how long it lasts. */
-export function WaterCard({ vehicle, people }: { vehicle?: Vehicle; people: number }) {
+/**
+ * Water for the trip: whether the stops have known water, how many people are travelling
+ * (changed right here, as it's only used for water), what they drink a day, and how long the
+ * water carried lasts.
+ */
+export function WaterCard({
+  trip,
+  vehicle,
+  people,
+  dryStops,
+}: {
+  trip: Trip;
+  vehicle?: Vehicle;
+  people: number;
+  /** Trip stops with no known water nearby; empty when every stop has water. */
+  dryStops?: string[];
+}) {
   const theme = useTheme();
   const t = useT();
-  if (vehicle?.waterLitres === undefined) {
-    return (
-      <MissingCard
-        title={t('supplies.water')}
-        text={t('water.addText', { litres: WATER_PER_PERSON_PER_DAY })}
-        action={vehicle ? t('water.addCarried') : t('me.noVehicle')}
-      />
-    );
-  }
-  const lastsDays = vehicle.waterLitres / (WATER_PER_PERSON_PER_DAY * people);
+  const perDay = WATER_PER_PERSON_PER_DAY * people;
+  const carried = vehicle?.waterLitres;
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
       <View style={styles.titleRow}>
         <ThemedText type="heading">{t('supplies.water')}</ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${t('water.carried', { litres: vehicle.waterLitres })}. ${t('me.editVehicle')}`}
-          onPress={() => router.push('/vehicle')}
-          style={({ pressed }) => [styles.vehicleLink, pressed && styles.pressed]}>
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {t('water.carried', { litres: vehicle.waterLitres })} · {t('water.people', { count: people })}
+        {carried !== undefined && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${t('water.carried', { litres: carried })}. ${t('me.editVehicle')}`}
+            onPress={() => router.push('/vehicle')}
+            style={({ pressed }) => [styles.vehicleLink, pressed && styles.pressed]}>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {t('water.carried', { litres: carried })}
+            </ThemedText>
+          </Pressable>
+        )}
+      </View>
+      {dryStops && dryStops.length > 0 && (
+        <Note tone="warning">{t('water.dryStops', { stops: dryStops.join(', ') })}</Note>
+      )}
+      {dryStops?.length === 0 && <Note tone="good">{t('water.everyStop')}</Note>}
+
+      <View style={styles.peopleRow}>
+        <View style={styles.shrink}>
+          <ThemedText style={styles.peopleLabel}>{t('water.people', { count: people })}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {t('water.perDay', { litres: perDay, perPerson: WATER_PER_PERSON_PER_DAY })}
           </ThemedText>
-        </Pressable>
+        </View>
+        <Stepper
+          label={t('tripForm.people')}
+          value={people}
+          min={1}
+          max={MAX_PEOPLE}
+          onChange={(value) => saveTripPeople(trip, value)}
+          decreaseLabel={t('tripForm.fewerPeople')}
+          increaseLabel={t('tripForm.morePeople')}
+        />
       </View>
-      <View style={styles.bigRow}>
-        <ThemedText style={[styles.big, { color: theme.text }]}>{halfDaysDown(lastsDays)}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.shrink}>
-          {t('water.daysOfWater', { litres: WATER_PER_PERSON_PER_DAY })}
-        </ThemedText>
-      </View>
-      <ThemedText type="small" themeColor="textSecondary">
-        {t('water.peopleHint')}
-      </ThemedText>
+
+      {carried === undefined ? (
+        <>
+          <ThemedText type="small" themeColor="textSecondary">
+            {t('water.addText')}
+          </ThemedText>
+          <Button
+            compact
+            variant="outline"
+            label={vehicle ? t('water.addCarried') : t('me.noVehicle')}
+            onPress={() => router.push('/vehicle')}
+          />
+        </>
+      ) : (
+        <View style={styles.bigRow}>
+          <ThemedText style={[styles.big, { color: theme.text }]}>{halfDaysDown(carried / perDay)}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.shrink}>
+            {t('water.daysOfWater', { litres: carried })}
+          </ThemedText>
+        </View>
+      )}
     </ThemedView>
+  );
+}
+
+/** When every stop has known water: a short note, and a way to plan water anyway. */
+export function WaterOptionalNote({ onPlan }: { onPlan: () => void }) {
+  const t = useT();
+  return (
+    <Card>
+      <Note tone="good">{t('water.everyStop')}</Note>
+      <TextButton label={t('water.planAnyway')} onPress={onPlan} />
+    </Card>
   );
 }
 
@@ -753,6 +807,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: Spacing.two,
+  },
+  peopleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  peopleLabel: {
+    fontWeight: 600,
   },
   bigRow: {
     flexDirection: 'row',
