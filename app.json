@@ -52,6 +52,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "597b7895-ab2b-4993-8f6f-a507e929997b"
+      }
+    },
+    "owner": "xtoffexpo"
   }
 }
