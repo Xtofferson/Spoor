@@ -28,7 +28,7 @@ type Place = {
 /**
  * The landing page after signing in: the wordmark, the slogan, a greeting, and a large button
  * for each part of the app (Trips, Community, Maps and Me). Each opens that tab, with the tab
- * bar. Below them, a greyed-out wheel leaves its track in the sand, then an EN | AF switch.
+ * bar. Below them, an EN | AF switch, then a greyed-out wheel leaving its track in the sand.
  */
 export default function Landing() {
   const t = useT();
@@ -95,8 +95,8 @@ export default function Landing() {
             ))}
           </View>
 
-          <WheelTrack style={styles.wheel} />
           <LanguageToggle />
+          <WheelTrack style={styles.wheel} />
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
