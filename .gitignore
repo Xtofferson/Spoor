@@ -33,6 +33,8 @@ yarn-error.*
 # local env files
 .env
 .env*.local
+# copies of env files kept as text, e.g. Spoor.env.txt
+*.env.txt
 
 # typescript
 *.tsbuildinfo
